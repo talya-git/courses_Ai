@@ -180,6 +180,11 @@ create policy subs_staff      on public.submissions for all    to authenticated 
 drop policy if exists views_read on public.lesson_views;
 create policy views_read on public.lesson_views for select to authenticated using (email = public.my_email() or public.is_staff());
 
+-- ---------- table access for signed-in users (the rules above still decide what each one sees) ----------
+grant usage on schema public to authenticated;
+grant select, insert, update, delete on all tables in schema public to authenticated;
+revoke all on all tables in schema public from anon;
+
 -- ---------- storage for the decks ----------
 insert into storage.buckets (id, name, public) values ('slides', 'slides', false)
 on conflict (id) do nothing;
