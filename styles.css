@@ -290,3 +290,9 @@ textarea { resize: vertical; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 .main-col { min-width: 0; display: flex; flex-direction: column; }
+.gate-card .tabs { margin: 6px 0 4px; }
+.gate-card .form { margin-top: 4px; }
+.gate-card .form .btn { justify-self: stretch; margin-top: 4px; }
+.form-error { margin: 0; padding: 10px 12px; border-radius: 8px; background: var(--bad-soft); color: var(--bad); font-weight: 500; }
+body.gated .container { max-width: none; padding: 0; }
+body.gated .gate { min-height: 100vh; }

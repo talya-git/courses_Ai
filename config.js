@@ -9,5 +9,5 @@ export const config = {
 
   // true = מצב הדגמה: האתר עובד עם נתוני דוגמה, בלי Supabase ובלי כניסה.
   // אחרי שממלאים את שני השדות למעלה, משנים ל-false.
-  demo: true,
+  demo: false,
 }

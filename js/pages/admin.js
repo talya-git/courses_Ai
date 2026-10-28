@@ -21,7 +21,7 @@ async function studentsTab(view, tabs) {
   const pick = sessionStorage.getItem('admin-course')
   let courseId = courses.some((c) => c.id === pick) ? pick : courses[0].id
   const root = view.render(`
-    ${hero({ title: 'הרשאות תלמידות', text: 'רק מיילים שמופיעים כאן יכולים להיכנס לקורס. התלמידה נכנסת עם חשבון Google של אותו מייל.' })}
+    ${hero({ title: 'הרשאות תלמידות', text: 'רק מיילים שמופיעים כאן יכולים להיכנס לקורס. התלמידה נרשמת עם אותו מייל ובוחרת סיסמה.' })}
     ${tabs}
     <section class="panel">
       <label class="form"><b>קורס</b>

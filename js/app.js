@@ -1,7 +1,7 @@
 // Router and page frame: side navigation, login and "no access" screens.
 import { config } from '../config.js'
 import { configured } from './supabase.js'
-import { auth, initAuth, signIn, signOut } from './auth.js'
+import { auth, initAuth, signIn, signUp, signOut } from './auth.js'
 import { esc, toast, NOT_FOUND } from './ui.js'
 import { enterPage } from './motion.js'
 import { home, course, lecture, materials, slidesPage, exercise } from './pages/student.js'
@@ -53,8 +53,8 @@ async function route() {
   const view = makeView(id)
   const path = location.hash.replace(/^#/, '') || '/'
 
-  if (!auth.session) return gate(loginScreen())
-  if (!auth.isStaff && !auth.courseIds.length) return gate(noAccessScreen())
+  if (!auth.session) return loginScreen()
+  if (!auth.isStaff && !auth.courseIds.length) return noAccessScreen()
   document.body.classList.remove('gated')
   drawNav(path)
 
@@ -108,16 +108,43 @@ const gateFrame = (inner) => `
     <div class="gate-card">${inner}</div>
   </section>`
 
-function loginScreen() {
+function loginScreen(mode = 'in') {
+  const isUp = mode === 'up'
   const root = gate(gateFrame(`
-    <p class="eyebrow">כניסה לאתר</p>
+    <p class="eyebrow">${isUp ? 'הרשמה ראשונה' : 'כניסה לאתר'}</p>
     <h1>${esc(config.siteName)}</h1>
-    <p class="muted">האתר פתוח רק למיילים שאושרו. נכנסים עם חשבון ה-Google של המייל שמסרת.</p>
-    <button id="signin" class="btn primary big">כניסה עם Google</button>`))
-  root.querySelector('#signin').addEventListener('click', async () => {
-    const { error } = await signIn()
-    if (error) toast('הכניסה נכשלה: ' + error.message, 'error')
+    <nav class="tabs" aria-label="כניסה או הרשמה">
+      <a href="#" data-mode="in" class="${isUp ? '' : 'active'}">כניסה</a>
+      <a href="#" data-mode="up" class="${isUp ? 'active' : ''}">הרשמה בפעם הראשונה</a>
+    </nav>
+    <p class="muted">${isUp
+      ? 'נרשמים פעם אחת עם המייל שמסרת למרצה, ובוחרים סיסמה. רק מיילים שאושרו יראו את הקורסים.'
+      : 'נכנסים עם המייל והסיסמה שבחרת בהרשמה.'}</p>
+    <form class="form" id="auth-form" novalidate>
+      <label>מייל<input id="auth-email" name="email" type="email" dir="ltr" autocomplete="email" required></label>
+      <label>סיסמה<input id="auth-pass" name="password" type="password" dir="ltr" autocomplete="${isUp ? 'new-password' : 'current-password'}" minlength="6" required>
+        ${isUp ? '<span class="hint">לפחות 6 תווים.</span>' : ''}</label>
+      ${isUp ? '<label>הסיסמה שוב<input id="auth-pass2" name="password2" type="password" dir="ltr" autocomplete="new-password" required></label>' : ''}
+      <p class="form-error" id="auth-error" role="alert" hidden></p>
+      <button class="btn primary big">${isUp ? 'הרשמה' : 'כניסה'}</button>
+    </form>
+    ${isUp ? '' : '<p class="hint">שכחת סיסמה? פני למרצה, והיא תאפס לך את החשבון.</p>'}`))
+  root.querySelectorAll('[data-mode]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); loginScreen(a.dataset.mode) }))
+  const form = root.querySelector('#auth-form'), errEl = root.querySelector('#auth-error')
+  const fail = (msg) => { errEl.textContent = msg; errEl.hidden = false }
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault()
+    errEl.hidden = true
+    const email = form.email.value.trim(), password = form.password.value
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail('כתובת המייל לא תקינה.')
+    if (password.length < 6) return fail('הסיסמה קצרה מדי. צריך לפחות 6 תווים.')
+    if (isUp && password !== form.password2.value) return fail('שתי הסיסמאות לא זהות.')
+    const btn = form.querySelector('button'); btn.disabled = true
+    const { error } = isUp ? await signUp(email, password) : await signIn(email, password)
+    btn.disabled = false
+    if (error) fail(error.message)
   })
+  root.querySelector('#auth-email').focus()
   return root
 }
 

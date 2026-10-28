@@ -43,22 +43,41 @@ export async function initAuth(onChange) {
   const { data, error } = await supabase.auth.getSession()
   if (error) throw error
   await loadAccess(data.session)
-  // remove ?code= left by the Google redirect
-  if (location.search.includes('code=')) history.replaceState(null, '', location.pathname + location.hash)
-  supabase.auth.onAuthStateChange(async (event, session) => {
+  // Run the reload outside the auth callback: calling Supabase inside it can stall the library.
+  supabase.auth.onAuthStateChange((event, session) => {
     if (event === 'TOKEN_REFRESHED') { auth.session = session; return }
     if (event === 'INITIAL_SESSION') return
-    await loadAccess(session)
-    onChange()
+    setTimeout(async () => { await loadAccess(session); onChange() }, 0)
   })
 }
 
-export async function signIn() {
+const HEBREW_ERRORS = [
+  [/invalid login credentials/i, 'המייל או הסיסמה לא נכונים.'],
+  [/already registered|already exists/i, 'המייל הזה כבר רשום. אפשר להיכנס איתו בלשונית "כניסה".'],
+  [/password should be at least|weak password/i, 'הסיסמה קצרה מדי. צריך לפחות 6 תווים.'],
+  [/email not confirmed/i, 'המייל עוד לא אושר. צריך לבקש מהמרצה לכבות את אישור המייל ב-Supabase.'],
+  [/invalid email|unable to validate email/i, 'כתובת המייל לא תקינה.'],
+  [/rate limit|too many/i, 'יותר מדי ניסיונות. כדאי לחכות כמה דקות ולנסות שוב.'],
+]
+const hebrew = (error) => {
+  if (!error) return null
+  const hit = HEBREW_ERRORS.find(([re]) => re.test(error.message || ''))
+  return { message: hit ? hit[1] : error.message }
+}
+
+export async function signIn(email, password) {
   if (demo) return { error: null }
-  return supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: { redirectTo: location.origin + location.pathname, queryParams: { prompt: 'select_account' } },
-  })
+  const { error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password })
+  return { error: hebrew(error) }
+}
+
+export async function signUp(email, password) {
+  if (demo) return { error: null }
+  const { data, error } = await supabase.auth.signUp({ email: email.trim().toLowerCase(), password })
+  if (error) return { error: hebrew(error) }
+  // Supabase answers without a session when the address is already taken or email confirmation is on.
+  if (!data.session) return { error: { message: 'ההרשמה לא הושלמה. אם כבר נרשמת עם המייל הזה, היכנסי בלשונית "כניסה".' } }
+  return { error: null }
 }
 
 export async function signOut() {
