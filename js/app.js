@@ -4,8 +4,8 @@ import { configured } from './supabase.js'
 import { auth, initAuth, signIn, signUp, signOut } from './auth.js'
 import { esc, toast, NOT_FOUND } from './ui.js'
 import { enterPage } from './motion.js'
-import { home, course, lecture, materials, slidesPage, exercise } from './pages/student.js'
-import { manageHome, manageCourse, lectureEditor, submissions, lessonViews, submissionsHome } from './pages/manage.js'
+import { home, course, lecture, slidesPage, exercise } from './pages/student.js'
+import { manageHome, manageCourse, lectureEditor, submissions, submissionsHome } from './pages/manage.js'
 import { admin } from './pages/admin.js'
 
 const main = document.getElementById('main')
@@ -17,16 +17,14 @@ const ROUTES = [
   { re: /^\/$/, page: home },
   { re: /^\/course\/([\w-]+)$/, page: course },
   { re: /^\/lecture\/([\w-]+)$/, page: lecture },
-  { re: /^\/lecture\/([\w-]+)\/materials$/, page: materials },
-  { re: /^\/lecture\/([\w-]+)\/slides$/, page: slidesPage },
+  { re: /^\/lecture\/([\w-]+)\/slides$/, page: (v, id) => slidesPage(v, id) },
   { re: /^\/exercise\/([\w-]+)$/, page: exercise },
   { re: /^\/manage$/, page: manageHome, need: 'staff' },
   { re: /^\/submissions$/, page: submissionsHome, need: 'staff' },
   { re: /^\/manage\/course\/([\w-]+)$/, page: manageCourse, need: 'staff' },
-  { re: /^\/manage\/course\/([\w-]+)\/new-lecture$/, page: (v, cid) => lectureEditor(v, null, cid), need: 'staff' },
+  { re: /^\/manage\/course\/([\w-]+)\/new\/(slides|video|exercise)$/, page: (v, cid, kind) => lectureEditor(v, null, cid, kind), need: 'staff' },
   { re: /^\/manage\/lecture\/([\w-]+)$/, page: (v, id) => lectureEditor(v, id), need: 'staff' },
   { re: /^\/manage\/exercise\/([\w-]+)\/submissions$/, page: submissions, need: 'staff' },
-  { re: /^\/manage\/lecture\/([\w-]+)\/views$/, page: lessonViews, need: 'staff' },
   { re: /^\/admin(?:\/([\w-]+))?$/, page: admin, need: 'admin' },
 ]
 
@@ -79,7 +77,7 @@ function drawNav(path) {
     <a class="brand" href="#/"><span class="mark" aria-hidden="true"></span><span>${esc(config.siteName)}</span></a>
     <nav class="nav" aria-label="ניווט ראשי">
       ${item('#/', 'הקורסים שלי', '◆', !inManage && !inAdmin && !inSubs)}
-      ${auth.isStaff ? item('#/manage', 'ניהול תוכן', '▤', inManage) : ''}
+      ${auth.isStaff ? item('#/manage', 'ניהול קורסים', '▤', inManage) : ''}
       ${auth.isStaff ? item('#/submissions', 'הגשות', '✎', inSubs) : ''}
       ${auth.isAdmin ? item('#/admin', 'הרשאות', '◎', inAdmin) : ''}
     </nav>

@@ -43,13 +43,15 @@ const live = {
   async getLecture(id) {
     return withExercises(check(await supabase.from('lectures').select('*, exercises(*)').eq('id', id).maybeSingle()))
   },
+  // An item of a course: a presentation, a video or an exercise. Always visible to the course's students.
   async saveLecture(l) {
-    const row = {
-      course_id: l.course_id, number: +l.number || 1, title: l.title, summary: l.summary || '',
-      video_url: l.video_url || '', materials: l.materials || [], published: !!l.published, updated_at: new Date().toISOString(),
-    }
-    if (l.id) return check(await supabase.from('lectures').update(row).eq('id', l.id).select().single())
+    if (l.id) return check(await supabase.from('lectures').update({ title: l.title, updated_at: new Date().toISOString() }).eq('id', l.id).select().single())
+    const last = check(await supabase.from('lectures').select('number').eq('course_id', l.course_id).order('number', { ascending: false }).limit(1))
+    const row = { course_id: l.course_id, kind: l.kind || 'slides', title: l.title, number: (last[0]?.number || 0) + 1, published: true }
     return check(await supabase.from('lectures').insert(row).select().single())
+  },
+  async reorder(ids) {
+    for (let i = 0; i < ids.length; i++) check(await supabase.from('lectures').update({ number: i + 1 }).eq('id', ids[i]))
   },
   async deleteLecture(id) {
     const lec = await live.getLecture(id)
@@ -57,15 +59,19 @@ const live = {
     check(await supabase.from('lectures').delete().eq('id', id))
   },
 
-  // ---- slides ----
-  async uploadSlides(lectureId, file) {
-    const path = `${lectureId}/deck.html`
-    check(await supabase.storage.from(SLIDES_BUCKET).upload(path, file, { upsert: true, contentType: 'text/html; charset=utf-8' }))
+  // ---- files (presentations and videos) ----
+  async uploadFile(lectureId, file, kind) {
+    const old = (await live.getLecture(lectureId))?.slides_path
+    const ext = (file.name.split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '')
+    const path = kind === 'video' ? `${lectureId}/video.${ext}` : `${lectureId}/deck.html`
+    const contentType = kind === 'video' ? (file.type || 'video/mp4') : 'text/html; charset=utf-8'
+    check(await supabase.storage.from(SLIDES_BUCKET).upload(path, file, { upsert: true, contentType }))
+    if (old && old !== path) await supabase.storage.from(SLIDES_BUCKET).remove([old])
     check(await supabase.from('lectures').update({ slides_path: path, slides_name: file.name }).eq('id', lectureId))
   },
-  async removeSlides(lectureId, path) {
-    if (path) await supabase.storage.from(SLIDES_BUCKET).remove([path])
-    check(await supabase.from('lectures').update({ slides_path: null, slides_name: null }).eq('id', lectureId))
+  async getFileUrl(lecture) {
+    const data = check(await supabase.storage.from(SLIDES_BUCKET).createSignedUrl(lecture.slides_path, 6 * 3600))
+    return data.signedUrl
   },
   async getSlidesHtml(lecture) {
     const blob = check(await supabase.storage.from(SLIDES_BUCKET).download(lecture.slides_path))
@@ -98,11 +104,6 @@ const live = {
     check(await supabase.from('submissions').update({ status, feedback }).eq('id', id))
   },
 
-  // ---- lesson views ----
-  async recordView(lectureId) { await supabase.rpc('record_view', { l: lectureId }) },
-  async listViews(lectureId) {
-    return check(await supabase.from('lesson_views').select('*').eq('lecture_id', lectureId))
-  },
 
   // ---- people ----
   async listStaff() { return check(await supabase.from('staff').select('*').order('email')) },

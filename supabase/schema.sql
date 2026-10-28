@@ -33,13 +33,14 @@ create table if not exists public.lectures (
   id          uuid primary key default gen_random_uuid(),
   course_id   uuid not null references public.courses on delete cascade,
   number      int  not null default 1,
+  kind        text not null default 'slides' check (kind in ('slides', 'video', 'exercise')),
   title       text not null,
   summary     text not null default '',
   video_url   text not null default '',
   materials   jsonb not null default '[]'::jsonb,
   slides_path text,
   slides_name text,
-  published   boolean not null default false,
+  published   boolean not null default true,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
@@ -74,6 +75,10 @@ create table if not exists public.lesson_views (
   views      int not null default 1,
   primary key (lecture_id, email)
 );
+
+-- for databases created before items had a kind (safe to run again)
+alter table public.lectures add column if not exists kind text not null default 'slides' check (kind in ('slides', 'video', 'exercise'));
+alter table public.lectures alter column published set default true;
 
 -- ---------- helper functions (who is asking) ----------
 create or replace function public.my_email() returns text

@@ -296,3 +296,11 @@ textarea { resize: vertical; }
 .form-error { margin: 0; padding: 10px 12px; border-radius: 8px; background: var(--bad-soft); color: var(--bad); font-weight: 500; }
 body.gated .container { max-width: none; padding: 0; }
 body.gated .gate { min-height: 100vh; }
+.add-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+.order { display: inline-flex; gap: 2px; flex: none; }
+.order .btn { padding: 4px 8px; }
+.confirm { display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 8px 10px; border-radius: 8px; background: var(--bad-soft); color: var(--bad); font-weight: 600; }
+.player { background: var(--ink); border-radius: var(--r); overflow: hidden; }
+.player video { display: block; width: 100%; max-height: calc(100vh - 220px); background: #000; }
+.narrow-field { max-width: 240px; }
+.lecture-list .num { font-size: 1.25rem; }

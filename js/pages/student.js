@@ -1,116 +1,97 @@
 import { db } from '../db.js'
 import { auth } from '../auth.js'
-import { esc, toast, NOT_FOUND, fmtDate, rich, hero, embedUrl, statusBadge } from '../ui.js'
+import { esc, toast, NOT_FOUND, fmtDate, rich, hero, statusBadge } from '../ui.js'
 
 const canSeeCourse = (id) => auth.isStaff || auth.courseIds.includes(id)
 
+// What each kind of course item looks like and where it opens.
+export const KIND = {
+  slides: { icon: '🖥️', label: 'מצגת' },
+  video: { icon: '🎬', label: 'סרטון' },
+  exercise: { icon: '✏️', label: 'תרגיל' },
+}
+export const itemHref = (it) => (it.kind === 'exercise' && (it.exercises || [])[0]
+  ? `#/exercise/${it.exercises[0].id}`
+  : `#/lecture/${it.id}`)
+
 // ---------- home: my courses ----------
 export async function home(view) {
-  const all = await db.listCourses()
-  const courses = all.filter((c) => canSeeCourse(c.id))
+  const courses = (await db.listCourses()).filter((c) => canSeeCourse(c.id))
   view.render(`
-    ${hero({ title: 'הקורסים שלי', text: courses.length ? 'בחרי קורס כדי לראות את ההרצאות, המצגות והתרגילים.' : '' })}
+    ${hero({ title: 'הקורסים שלי' })}
     ${courses.length ? `<div class="cards">${courses.map((c) => `
       <a class="card" href="#/course/${esc(c.id)}">
-        <div class="card-icon">${esc(c.icon || '🎓')}</div>
         <h2>${esc(c.title)}</h2>
-        <p class="muted">${esc(c.description)}</p>
         <span class="go">כניסה לקורס ←</span>
       </a>`).join('')}</div>`
       : `<div class="empty"><p>עדיין אין קורסים.</p>${auth.isStaff ? '<a class="btn primary" href="#/manage">להוספת קורס</a>' : ''}</div>`}`)
 }
 
-// ---------- course: list of lectures ----------
+// ---------- course: its presentations, videos and exercises ----------
 export async function course(view, id) {
   if (!canSeeCourse(id)) return view.render(NOT_FOUND)
   const c = await db.getCourse(id)
   if (!c) return view.render(NOT_FOUND)
-  const lectures = (await db.listLectures(id)).filter((l) => l.published || auth.isStaff)
+  const items = await db.listLectures(id)
   view.render(`
-    ${hero({ title: c.title, text: c.description, crumbs: [['#/', 'הקורסים שלי']],
+    ${hero({ title: c.title, crumbs: [['#/', 'הקורסים שלי']],
       actions: auth.isStaff ? `<a class="btn small ghost" href="#/manage/course/${esc(id)}">עריכת הקורס</a>` : '' })}
-    ${lectures.length ? `<ol class="lecture-list">${lectures.map((l) => `
-      <li><a href="#/lecture/${esc(l.id)}">
-        <span class="num">${esc(l.number)}</span>
-        <span class="title">${esc(l.title)}${l.published ? '' : ' <span class="badge warn">טיוטה</span>'}</span>
+    ${items.length ? `<ol class="lecture-list">${items.map((it) => {
+      const k = KIND[it.kind] || KIND.slides
+      return `<li><a href="${itemHref(it)}">
+        <span class="num" aria-hidden="true">${k.icon}</span>
+        <span class="title">${esc(it.title)}<span class="muted small">${k.label}</span></span>
         <span class="arrow">←</span>
-      </a></li>`).join('')}</ol>`
-      : '<div class="empty"><p>עדיין לא פורסמו הרצאות בקורס הזה.</p></div>'}`)
+      </a></li>`
+    }).join('')}</ol>`
+      : '<div class="empty"><p>עדיין לא הועלו מצגות או סרטונים לקורס הזה.</p></div>'}`)
 }
 
-async function loadLecture(id) {
-  const l = await db.getLecture(id)
-  if (!l || !canSeeCourse(l.course_id) || (!l.published && !auth.isStaff)) return null
-  const c = await db.getCourse(l.course_id)
-  return { l, c, ex: (l.exercises || [])[0] || null }
+async function loadItem(id) {
+  const it = await db.getLecture(id)
+  if (!it || !canSeeCourse(it.course_id)) return null
+  const c = await db.getCourse(it.course_id)
+  return { it, c }
 }
 
-// ---------- lecture: the four big buttons ----------
+// ---------- one item: a presentation or a video ----------
 export async function lecture(view, id) {
-  const data = await loadLecture(id)
+  const data = await loadItem(id)
   if (!data) return view.render(NOT_FOUND)
-  const { l, c, ex } = data
-  if (!auth.isStaff) db.recordView(id).catch(() => {})
-  const mats = l.materials || []
-  const video = embedUrl(l.video_url)
-  const action = (href, icon, title, text, enabled) => enabled
-    ? `<a class="action-card" href="${href}"><span class="action-icon">${icon}</span><span class="action-title">${title}</span><span class="action-text">${text}</span></a>`
-    : `<div class="action-card disabled" aria-disabled="true"><span class="action-icon">${icon}</span><span class="action-title">${title}</span><span class="action-text">עדיין לא הועלה</span></div>`
+  const { it, c } = data
+  if (it.kind === 'exercise' && (it.exercises || [])[0]) { location.replace(`#/exercise/${it.exercises[0].id}`); return }
+  if (it.kind !== 'video') return slidesPage(view, id, data)
+  if (!it.slides_path) return view.render(`${hero({ title: it.title, crumbs: [['#/', 'הקורסים שלי'], [`#/course/${c.id}`, c.title]] })}<div class="empty"><p>הסרטון עוד לא הועלה.</p></div>`)
+  const url = await db.getFileUrl(it)
   view.render(`
-    ${hero({ title: l.title, badge: `הרצאה ${l.number}`, crumbs: [['#/', 'הקורסים שלי'], [`#/course/${c.id}`, c.title]],
+    ${hero({ title: it.title, crumbs: [['#/', 'הקורסים שלי'], [`#/course/${c.id}`, c.title]],
       actions: auth.isStaff ? `<a class="btn small ghost" href="#/manage/lecture/${esc(id)}">עריכה</a>` : '' })}
-    <div class="action-grid">
-      ${action(`#/lecture/${id}/slides`, '🖥️', 'מצגת', 'צפייה במצגת השיעור', !!l.slides_path)}
-      ${action(`#/lecture/${id}/materials`, '📚', 'חומרי לימוד', `${mats.length} קישורים`, mats.length > 0)}
-      ${action(ex ? `#/exercise/${ex.id}` : '', '✏️', 'תרגיל', ex ? 'הגשה ומשוב' : '', !!ex)}
-      ${action('#video', '🎬', 'הקלטה', 'צפייה בהקלטת השיעור', !!video)}
-    </div>
-    ${l.summary ? `<section class="panel"><h2>על השיעור</h2>${rich(l.summary)}</section>` : ''}
-    ${video ? `<section class="panel" id="video"><h2>הקלטת השיעור</h2><div class="video"><iframe src="${esc(video)}" title="הקלטת השיעור" allow="fullscreen; picture-in-picture" allowfullscreen loading="lazy"></iframe></div></section>` : ''}
-    ${ex ? `<section class="panel exercise-cta"><div><h2>${esc(ex.title)}</h2><p class="muted">${ex.due_at ? 'להגשה עד ' + fmtDate(ex.due_at) : 'אפשר להגיש בכל זמן'}</p></div><div class="actions">${auth.isStaff ? `<a class="btn" href="#/manage/exercise/${esc(ex.id)}/submissions">📥 הגשות</a>` : ''}<a class="btn primary" href="#/exercise/${esc(ex.id)}">לתרגיל ←</a></div></section>` : ''}`)
-  const vlink = document.querySelector('a.action-card[href="#video"]')
-  vlink?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('video')?.scrollIntoView({ behavior: 'smooth' }) })
+    <div class="player"><video src="${esc(url)}" controls playsinline preload="metadata"></video></div>`)
 }
 
-// ---------- materials ----------
-export async function materials(view, id) {
-  const data = await loadLecture(id)
-  if (!data) return view.render(NOT_FOUND)
-  const { l, c } = data
-  const mats = l.materials || []
-  const icon = (url) => /\.pdf($|\?)/i.test(url) ? '📄' : /youtu|vimeo/.test(url) ? '🎬' : /github/.test(url) ? '💻' : /docs\.google|drive\.google/.test(url) ? '📝' : '🔗'
-  view.render(`
-    ${hero({ title: 'חומרי לימוד', text: l.title, crumbs: [['#/', 'הקורסים שלי'], [`#/course/${c.id}`, c.title], [`#/lecture/${l.id}`, l.title]] })}
-    <section class="panel">
-      ${mats.length ? `<ul class="link-list">${mats.map((m) => `
-        <li><a href="${esc(m.url)}" target="_blank" rel="noopener">
-          <span class="link-icon">${icon(m.url)}</span>
-          <span><b>${esc(m.title || m.url)}</b><span class="muted small" dir="ltr">${esc(m.url)}</span></span>
-        </a></li>`).join('')}</ul>` : '<p class="muted">עדיין אין חומרים להרצאה הזו.</p>'}
-    </section>`)
-}
-
-// ---------- slides ----------
+// ---------- presentation ----------
 const HIDE_NOTES = '<style>#notes,#notesBtn,.notes,aside.n{display:none!important}</style>'
 
-export async function slidesPage(view, id) {
-  const data = await loadLecture(id)
-  if (!data || !data.l.slides_path) return view.render(NOT_FOUND)
-  const { l } = data
-  const html = await db.getSlidesHtml(l)
+export async function slidesPage(view, id, loaded) {
+  const data = loaded || await loadItem(id)
+  if (!data) return view.render(NOT_FOUND)
+  const { it, c } = data
+  if (!it.slides_path) return view.render(`${hero({ title: it.title, crumbs: [['#/', 'הקורסים שלי'], [`#/course/${c.id}`, c.title]] })}<div class="empty"><p>המצגת עוד לא הועלתה.</p></div>`)
+  const html = await db.getSlidesHtml(it)
   const root = view.render(`
     <div class="deck-bar">
-      <a class="btn small ghost" href="#/lecture/${esc(l.id)}">→ חזרה להרצאה</a>
-      <span class="deck-title">${esc(l.title)}</span>
+      <a class="btn small ghost" href="#/course/${esc(c.id)}">→ חזרה לקורס</a>
+      <span class="deck-title">${esc(it.title)}</span>
+      ${auth.isStaff ? `<a class="btn small ghost" href="#/manage/lecture/${esc(id)}">עריכה</a>` : ''}
       <button class="btn small" id="fs">מסך מלא</button>
     </div>
-    <iframe class="deck" title="מצגת: ${esc(l.title)}" sandbox="allow-scripts allow-popups" allow="fullscreen"></iframe>
-    ${auth.isStaff ? '<p class="hint center">את רואה את הערות הדובר כי את מנהלת. תלמידות לא רואות אותן.</p>' : '<p class="hint center">מעבר בין שקפים: חצים במקלדת או לחיצה על הכפתורים במצגת.</p>'}`)
+    <iframe class="deck" title="מצגת: ${esc(it.title)}" sandbox="allow-scripts allow-popups" allow="fullscreen"></iframe>
+    ${auth.isStaff ? '<p class="hint center">את רואה את הערות הדובר כי את מנהלת. תלמידות לא רואות אותן.</p>' : '<p class="hint center">מעבר בין שקפים: חצים במקלדת או הכפתורים במצגת.</p>'}`)
   if (!root) return
   root.classList.add('wide')
   const frame = root.querySelector('iframe.deck')
   // Students never see the speaker notes.
-  frame.srcdoc = auth.isStaff ? html : html.replace(/<head([^>]*)>/i, `<head$1>${HIDE_NOTES}`) + (/<head/i.test(html) ? '' : HIDE_NOTES)
+  frame.srcdoc = auth.isStaff ? html : (/<head/i.test(html) ? html.replace(/<head([^>]*)>/i, `<head$1>${HIDE_NOTES}`) : HIDE_NOTES + html)
   root.querySelector('#fs').addEventListener('click', () => frame.requestFullscreen?.())
   frame.addEventListener('load', () => frame.focus())
 }
@@ -119,15 +100,15 @@ export async function slidesPage(view, id) {
 export async function exercise(view, id) {
   const ex = await db.getExercise(id)
   if (!ex) return view.render(NOT_FOUND)
-  const lec = ex.lectures, crs = lec.courses
+  const crs = ex.lectures.courses
   if (!canSeeCourse(crs.id)) return view.render(NOT_FOUND)
   const mine = auth.isStaff ? null : await db.mySubmission(id, auth.email)
   const locked = mine?.status === 'reviewed'
   const root = view.render(`
-    ${hero({ title: ex.title, text: ex.due_at ? 'להגשה עד ' + fmtDate(ex.due_at) : '', crumbs: [['#/', 'הקורסים שלי'], [`#/course/${crs.id}`, crs.title], [`#/lecture/${lec.id}`, lec.title]],
-      actions: auth.isStaff ? `<a class="btn small ghost" href="#/manage/exercise/${esc(id)}/submissions">הגשות</a>` : '' })}
+    ${hero({ title: ex.title, text: ex.due_at ? 'להגשה עד ' + fmtDate(ex.due_at) : '', crumbs: [['#/', 'הקורסים שלי'], [`#/course/${crs.id}`, crs.title]],
+      actions: auth.isStaff ? `<a class="btn small" href="#/manage/exercise/${esc(id)}/submissions">📥 הגשות</a><a class="btn small ghost" href="#/manage/lecture/${esc(ex.lectures.id)}">עריכה</a>` : '' })}
     <section class="panel"><h2>מה צריך לעשות</h2>${ex.instructions ? rich(ex.instructions) : '<p class="muted">אין הוראות.</p>'}</section>
-    ${auth.isStaff ? '<section class="panel muted-panel"><p class="muted">כמנהלת את לא מגישה. אפשר לראות את ההגשות של התלמידות בכפתור "הגשות".</p></section>' : `
+    ${auth.isStaff ? '<section class="panel muted-panel"><p class="muted">כמנהלת את לא מגישה. ההגשות של התלמידות נמצאות בכפתור "הגשות".</p></section>' : `
     <section class="panel">
       <div class="page-head"><h2>ההגשה שלי</h2>${mine ? statusBadge(mine.status) : ''}</div>
       ${mine?.feedback ? `<div class="feedback"><b>משוב:</b><div class="prose">${esc(mine.feedback)}</div></div>` : ''}
@@ -136,10 +117,10 @@ export async function exercise(view, id) {
         ${mine.answer ? `<div class="prose">${esc(mine.answer)}</div>` : ''}` : `
       <form class="form" id="sub">
         <label>קישור לעבודה (Google Drive, GitHub וכדומה)
-          <input name="link" type="url" dir="ltr" placeholder="https://" value="${esc(mine?.link || '')}">
+          <input id="sub-link" name="link" type="url" dir="ltr" placeholder="https://" value="${esc(mine?.link || '')}">
         </label>
         <label>תשובה או הערה למרצה
-          <textarea name="answer" rows="5">${esc(mine?.answer || '')}</textarea>
+          <textarea id="sub-answer" name="answer" rows="5">${esc(mine?.answer || '')}</textarea>
         </label>
         <div class="actions"><button class="btn primary">${mine ? 'עדכון ההגשה' : 'הגשה'}</button></div>
         ${mine ? `<p class="hint">הוגש לאחרונה ב-${fmtDate(mine.updated_at, true)}. עדכון יחזיר את הסטטוס ל"ממתין לבדיקה".</p>` : ''}
