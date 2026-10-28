@@ -1,0 +1,1308 @@
+<title>AI בסביבת העבודה</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Secular+One&family=IBM+Plex+Sans+Hebrew:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a fixed 1920×1080 "screen" scaled to the viewport, dark lab-console look; RTL throughout. Single committed dark world. */
+:root {
+  color-scheme: dark;
+  --ink: #0a0f1e;        /* page / stage ground */
+  --deep: #070b16;
+  --panel: #111a31;      /* cards */
+  --panel2: #16213f;
+  --line: rgba(150, 175, 255, 0.16);
+  --fg: #eaeef8;
+  --muted: #a3afcb;
+  --dim: #6f7c9c;
+  --accent: #74a9ff;     /* signal blue */
+  --accent-2: #f2b45a;   /* warm amber, used sparingly */
+  --good: #52d3a7;
+  --bad: #ff8a80;
+  --f-display: "Secular One", "IBM Plex Sans Hebrew", "Arial Hebrew", Arial, sans-serif;
+  --f-body: "IBM Plex Sans Hebrew", "Arial Hebrew", Arial, sans-serif;
+  --f-mono: "IBM Plex Mono", "IBM Plex Sans Hebrew", ui-monospace, monospace;
+}
+html, body { height: 100%; }
+body { background: var(--deep); color: var(--fg); font-family: var(--f-body); overflow: hidden; }
+#app { position: fixed; inset: 0; display: flex; flex-direction: column; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 12px calc(8px + env(safe-area-inset-bottom, 0px)); gap: 10px; }
+#viewport { flex: 1; min-height: 0; position: relative; display: flex; align-items: center; justify-content: center; }
+#stage { width: 1920px; height: 1080px; position: absolute; left: 50%; top: 50%; transform-origin: center center; border-radius: 18px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,.55); background: var(--ink); }
+.slide { position: absolute; inset: 0; direction: rtl; text-align: right; padding: 110px 130px 130px; display: flex; flex-direction: column; gap: 34px; opacity: 0; visibility: hidden; transition: opacity .45s ease, transform .45s ease; transform: translateX(-24px);
+  background:
+    radial-gradient(900px 600px at 92% -10%, rgba(116,169,255,.13), transparent 60%),
+    radial-gradient(700px 500px at -5% 110%, rgba(242,180,90,.07), transparent 60%),
+    linear-gradient(var(--ink), var(--ink));
+}
+.slide::before { content: ""; position: absolute; inset: 0; background-image: linear-gradient(rgba(150,175,255,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(150,175,255,.045) 1px, transparent 1px); background-size: 64px 64px; pointer-events: none; mask-image: linear-gradient(180deg, rgba(0,0,0,.9), rgba(0,0,0,.2)); }
+.slide.on { opacity: 1; visibility: visible; transform: none; }
+.slide > * { position: relative; }
+@media (prefers-reduced-motion: reduce) { .slide { transition: none; transform: none; } }
+
+/* chrome */
+.foot { position: absolute; left: 130px; right: 130px; bottom: 48px; display: flex; justify-content: space-between; align-items: center; font-size: 22px; color: var(--dim); letter-spacing: .3px; }
+.foot .sec { display: flex; align-items: center; gap: 12px; }
+.foot .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+.foot .num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; direction: ltr; }
+.kicker { font-size: 26px; font-weight: 600; color: var(--accent); letter-spacing: 1.5px; display: flex; align-items: center; gap: 14px; }
+.kicker::before { content: ""; width: 38px; height: 3px; background: var(--accent); border-radius: 2px; }
+h1, h2, h3 { margin: 0; font-weight: 400; text-wrap: balance; }
+h2 { font-family: var(--f-display); font-size: 78px; line-height: 1.08; letter-spacing: -.5px; }
+h3 { font-family: var(--f-body); font-weight: 700; font-size: 36px; line-height: 1.2; }
+p { margin: 0; }
+.lead { font-size: 36px; line-height: 1.45; color: var(--muted); max-width: 1450px; }
+.head { display: flex; flex-direction: column; gap: 18px; }
+.ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; }
+
+/* bullets */
+.bul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 22px; font-size: 38px; line-height: 1.4; max-width: 1500px; }
+.bul li { display: flex; gap: 22px; align-items: baseline; }
+.bul li::before { content: ""; flex: none; width: 14px; height: 14px; border-radius: 4px; background: var(--accent); transform: translateY(-6px) rotate(45deg); }
+.bul b { color: var(--fg); }
+.bul span.m { color: var(--muted); }
+
+/* cards */
+.grid { display: grid; gap: 28px; }
+.card { background: linear-gradient(180deg, var(--panel2), var(--panel)); border: 1px solid var(--line); border-radius: 22px; padding: 34px 36px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.card p { font-size: 29px; line-height: 1.45; color: var(--muted); }
+.card .ic { width: 64px; height: 64px; border-radius: 16px; display: grid; place-items: center; background: rgba(116,169,255,.12); color: var(--accent); }
+.card .ic svg { width: 36px; height: 36px; }
+.card.amber .ic { background: rgba(242,180,90,.12); color: var(--accent-2); }
+.card .tag { font-family: var(--f-mono); font-size: 22px; color: var(--accent); direction: ltr; text-align: right; }
+
+/* tool slide */
+.tool { display: grid; grid-template-columns: 480px 1fr; gap: 50px; flex: 1; min-height: 0; }
+.tool .id { background: linear-gradient(160deg, var(--panel2), var(--panel)); border: 1px solid var(--line); border-radius: 28px; padding: 44px; display: flex; flex-direction: column; gap: 22px; position: relative; overflow: hidden; }
+.tool .id::after { content: ""; position: absolute; width: 380px; height: 380px; border-radius: 50%; left: -140px; bottom: -160px; background: radial-gradient(circle, var(--tc), transparent 65%); opacity: .35; }
+.mono { width: 132px; height: 132px; border-radius: 34px; display: grid; place-items: center; font-family: var(--f-mono); font-weight: 500; font-size: 46px; color: var(--ink); background: var(--tc); direction: ltr; }
+.tool .name { font-family: var(--f-display); font-size: 70px; line-height: 1; direction: ltr; text-align: right; }
+.tool .by { font-size: 26px; color: var(--dim); }
+.tool .tagline { font-size: 32px; line-height: 1.4; color: var(--fg); }
+.tool .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-content: start; }
+.tool .box { background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 30px 34px; display: flex; flex-direction: column; gap: 16px; }
+.tool .box h3 { font-size: 30px; color: var(--tc); }
+.tool .box ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px; font-size: 28px; line-height: 1.4; color: var(--muted); }
+.tool .box li::before { content: "•"; color: var(--tc); margin-left: 12px; }
+.tool .tip { grid-column: span 2; background: rgba(242,180,90,.08); border: 1px solid rgba(242,180,90,.3); border-radius: 22px; padding: 26px 34px; font-size: 29px; line-height: 1.45; color: var(--fg); }
+.tool .tip b { color: var(--accent-2); }
+
+/* table */
+.tbl { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 29px; }
+.tbl th { text-align: right; font-weight: 600; color: var(--accent); font-size: 26px; padding: 18px 26px; border-bottom: 2px solid var(--line); }
+.tbl td { padding: 18px 26px; border-bottom: 1px solid var(--line); color: var(--muted); line-height: 1.35; vertical-align: top; }
+.tbl td:first-child { color: var(--fg); font-weight: 600; }
+.tbl .pill { display: inline-block; font-size: 24px; padding: 4px 16px; border-radius: 999px; background: rgba(116,169,255,.14); color: var(--accent); margin: 2px 0 2px 8px; direction: ltr; }
+
+/* compare */
+.cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 36px; }
+.cmp .col { border-radius: 24px; padding: 38px 42px; display: flex; flex-direction: column; gap: 20px; border: 1px solid var(--line); background: var(--panel); }
+.cmp .col.good { border-color: rgba(82,211,167,.35); background: linear-gradient(180deg, rgba(82,211,167,.08), var(--panel)); }
+.cmp .col.bad { border-color: rgba(255,138,128,.35); background: linear-gradient(180deg, rgba(255,138,128,.08), var(--panel)); }
+.cmp h3 { display: flex; gap: 14px; align-items: center; }
+.cmp .good h3 { color: var(--good); } .cmp .bad h3 { color: var(--bad); }
+.cmp ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 16px; font-size: 30px; line-height: 1.4; color: var(--fg); }
+.cmp li { display: flex; gap: 14px; align-items: baseline; }
+.cmp .good li::before { content: "✓"; color: var(--good); font-weight: 700; }
+.cmp .bad li::before { content: "✕"; color: var(--bad); font-weight: 700; }
+
+/* steps */
+.steps { display: grid; gap: 22px; }
+.step { display: grid; grid-template-columns: 84px 1fr; gap: 28px; align-items: start; background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 26px 32px; }
+.step .n { width: 84px; height: 84px; border-radius: 50%; display: grid; place-items: center; font-family: var(--f-mono); font-size: 36px; color: var(--ink); background: var(--accent); }
+.step h3 { font-size: 32px; } .step p { font-size: 28px; color: var(--muted); line-height: 1.4; margin-top: 6px; }
+.hsteps { display: grid; gap: 22px; }
+.hstep { background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 30px; display: flex; flex-direction: column; gap: 14px; position: relative; }
+.hstep .n { font-family: var(--f-mono); font-size: 26px; color: var(--accent); }
+.hstep h3 { font-size: 32px; } .hstep p { font-size: 27px; color: var(--muted); line-height: 1.45; }
+
+/* prompt */
+.code { font-family: var(--f-mono); direction: rtl; font-size: 27px; line-height: 1.6; background: #060a14; border: 1px solid var(--line); border-radius: 20px; padding: 30px 36px; color: #d5ddf0; white-space: pre-wrap; }
+.code:not(.ltr) { font-family: var(--f-body); font-size: 27px; line-height: 1.5; }
+.code.ltr { direction: ltr; text-align: left; font-size: 24px; line-height: 1.55; padding: 26px 32px; }
+.code .s { color: #9fd8a8; }
+.code .k { color: var(--accent-2); } .code .c { color: var(--dim); } .code .t { color: var(--accent); }
+.pp { display: grid; grid-template-columns: 1fr 1.6fr; gap: 34px; align-items: start; }
+.pp .lbl { font-size: 26px; font-weight: 600; display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.pp .bad .lbl { color: var(--bad); } .pp .good .lbl { color: var(--good); }
+.pp .bad .code { border-color: rgba(255,138,128,.35); } .pp .good .code { border-color: rgba(82,211,167,.35); }
+.side { display: flex; flex-direction: column; gap: 18px; }
+.chip { display: flex; gap: 16px; align-items: flex-start; font-size: 28px; line-height: 1.4; color: var(--muted); background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 20px 24px; }
+.chip b { color: var(--fg); display: block; }
+.chip .sw { flex: none; width: 16px; height: 16px; border-radius: 50%; margin-top: 12px; }
+
+/* statement */
+.statement { justify-content: center; align-items: flex-start; gap: 40px; }
+.statement .big { font-family: var(--f-display); font-size: 120px; line-height: 1.08; max-width: 1600px; text-wrap: balance; }
+.statement .big em { font-style: normal; color: var(--accent); }
+.statement .small { font-size: 40px; color: var(--muted); max-width: 1300px; line-height: 1.45; }
+
+/* section divider */
+.section { justify-content: center; gap: 30px; background:
+  radial-gradient(1000px 700px at 85% 40%, rgba(116,169,255,.22), transparent 60%),
+  radial-gradient(600px 400px at 10% 90%, rgba(242,180,90,.10), transparent 60%), var(--ink); }
+.section .no { font-family: var(--f-mono); font-size: 34px; color: var(--accent); letter-spacing: 4px; }
+.section h2 { font-size: 132px; }
+.section .sub { font-size: 40px; color: var(--muted); max-width: 1300px; line-height: 1.4; }
+.section .meta { display: flex; gap: 18px; flex-wrap: wrap; }
+.section .meta span { font-size: 26px; padding: 10px 22px; border: 1px solid var(--line); border-radius: 999px; color: var(--fg); background: rgba(17,26,49,.6); }
+.bignum { position: absolute; left: 90px; bottom: 40px; font-family: var(--f-display); font-size: 560px; line-height: 1; color: transparent; -webkit-text-stroke: 2px rgba(116,169,255,.25); pointer-events: none; }
+
+/* matrix */
+.mx { display: grid; grid-template-columns: 70px 1fr 1fr; grid-template-rows: 1fr 1fr 60px; gap: 20px; flex: 1; min-height: 0; }
+.mx .q { border-radius: 22px; padding: 30px 34px; display: flex; flex-direction: column; gap: 10px; border: 1px solid var(--line); background: var(--panel); }
+.mx .q h3 { font-size: 34px; } .mx .q p { font-size: 27px; color: var(--muted); line-height: 1.4; }
+.mx .q.win { background: linear-gradient(160deg, rgba(82,211,167,.16), var(--panel)); border-color: rgba(82,211,167,.4); } .mx .q.win h3 { color: var(--good); }
+.mx .q.big { background: linear-gradient(160deg, rgba(116,169,255,.16), var(--panel)); } .mx .q.big h3 { color: var(--accent); }
+.mx .q.no h3 { color: var(--bad); }
+.mx .ax { display: flex; align-items: center; justify-content: center; font-size: 26px; color: var(--dim); }
+.mx .ax.y { writing-mode: vertical-rl; transform: rotate(180deg); }
+
+/* flow */
+.flow { display: flex; align-items: stretch; gap: 0; flex-wrap: nowrap; }
+.node { flex: 1; min-width: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 26px 26px; display: flex; flex-direction: column; gap: 10px; }
+.node .who { font-size: 22px; font-weight: 600; letter-spacing: 1px; display: flex; gap: 10px; align-items: center; }
+.node.ai { border-color: rgba(116,169,255,.45); } .node.ai .who { color: var(--accent); }
+.node.human { border-color: rgba(242,180,90,.45); } .node.human .who { color: var(--accent-2); }
+.node.dec { border-style: dashed; border-color: rgba(82,211,167,.5); } .node.dec .who { color: var(--good); }
+.node h3 { font-size: 30px; } .node p { font-size: 25px; color: var(--muted); line-height: 1.4; }
+.arrow { flex: none; width: 54px; display: grid; place-items: center; color: var(--dim); }
+.arrow svg { width: 40px; height: 40px; }
+.legend { display: flex; gap: 30px; font-size: 25px; color: var(--muted); flex-wrap: wrap; }
+.legend span { display: flex; align-items: center; gap: 10px; }
+.legend i { width: 18px; height: 18px; border-radius: 5px; display: inline-block; }
+
+/* exercise */
+.ex { display: grid; grid-template-columns: 1.25fr 1fr; gap: 40px; flex: 1; min-height: 0; }
+.ex .goal { font-size: 34px; line-height: 1.45; color: var(--fg); background: rgba(116,169,255,.08); border: 1px solid rgba(116,169,255,.3); border-radius: 22px; padding: 30px 36px; }
+.ex .out { background: rgba(242,180,90,.08); border: 1px solid rgba(242,180,90,.3); border-radius: 22px; padding: 30px 36px; display: flex; flex-direction: column; gap: 14px; }
+.ex .out h3 { color: var(--accent-2); font-size: 30px; } .ex .out p { font-size: 28px; color: var(--muted); line-height: 1.45; }
+.badge { align-self: flex-start; font-size: 24px; font-weight: 600; color: var(--ink); background: var(--accent-2); padding: 8px 20px; border-radius: 999px; }
+
+/* cover */
+.cover { justify-content: center; gap: 36px; padding-right: 150px; }
+.cover canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.cover .eyebrow { font-size: 30px; color: var(--accent); letter-spacing: 2px; font-weight: 600; }
+.cover h1 { font-family: var(--f-display); font-size: 150px; line-height: 1.02; max-width: 1300px; }
+.cover h1 em { font-style: normal; background: linear-gradient(90deg, var(--accent), #b8d2ff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.cover .sub { font-size: 42px; color: var(--muted); max-width: 1150px; line-height: 1.4; }
+.cover .row { display: flex; gap: 18px; flex-wrap: wrap; }
+.cover .row span { font-size: 28px; padding: 12px 26px; border-radius: 999px; border: 1px solid var(--line); background: rgba(10,15,30,.7); }
+.end .big { font-size: 140px; }
+
+
+.grid.compact { gap: 22px; }
+.grid.compact .card { padding: 24px 30px; gap: 8px; }
+.grid.compact .card p { font-size: 26px; line-height: 1.4; }
+.grid.compact .card h3 { font-size: 32px; }
+.grid.compact .card .ic { width: 50px; height: 50px; border-radius: 13px; }
+.grid.compact .card .ic svg { width: 28px; height: 28px; }
+.hsteps.c5 .hstep { padding: 26px 24px; } .hsteps.c5 .hstep p { font-size: 25px; } .hsteps.c5 .hstep h3 { font-size: 30px; }
+.steps .step { padding: 18px 28px; grid-template-columns: 66px 1fr; gap: 24px; align-items: center; }
+.steps .step .n { width: 66px; height: 66px; font-size: 30px; }
+.steps .step h3 { font-size: 31px; } .steps .step p { font-size: 26px; margin-top: 2px; }
+.tool-k { display: flex; justify-content: space-between; align-items: center; }
+
+
+/* twobox */
+.twobox { display: grid; grid-template-columns: 1fr 1fr; gap: 36px; }
+.tb { border-radius: 24px; padding: 34px 38px; display: flex; flex-direction: column; gap: 18px; border: 1px solid var(--line); background: var(--panel); }
+.tb.good { border-color: rgba(82,211,167,.4); background: linear-gradient(180deg, rgba(82,211,167,.08), var(--panel)); } .tb.good h3 { color: var(--good); }
+.tb.bad { border-color: rgba(255,138,128,.4); background: linear-gradient(180deg, rgba(255,138,128,.08), var(--panel)); } .tb.bad h3 { color: var(--bad); }
+.tb .say { font-size: 31px; line-height: 1.5; color: var(--fg); font-style: italic; }
+.tb .cap { font-size: 27px; line-height: 1.45; color: var(--muted); margin-top: auto; }
+.form { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+.form div { display: flex; justify-content: space-between; gap: 20px; padding: 14px 22px; font-size: 29px; border-bottom: 1px solid var(--line); background: rgba(6,10,20,.5); }
+.form div:last-child { border-bottom: none; } .form span { color: var(--muted); } .form b { color: var(--fg); font-weight: 600; }
+/* chat */
+.chatwrap { display: grid; grid-template-columns: 1.75fr 1fr; gap: 40px; align-items: start; }
+.msgs { display: flex; flex-direction: column; gap: 18px; }
+.msg { max-width: 88%; padding: 20px 28px; border-radius: 24px; font-size: 28px; line-height: 1.45; display: flex; flex-direction: column; gap: 6px; }
+.msg .w { font-size: 21px; font-weight: 600; letter-spacing: .5px; }
+.msg.me { align-self: flex-start; background: rgba(116,169,255,.16); border: 1px solid rgba(116,169,255,.4); border-top-right-radius: 6px; } .msg.me .w { color: var(--accent); }
+.msg.ai { align-self: flex-end; background: var(--panel2); border: 1px solid var(--line); border-top-left-radius: 6px; } .msg.ai .w { color: var(--accent-2); }
+/* lights */
+.lights { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; }
+.light { border-radius: 24px; padding: 34px 36px; background: var(--panel); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 16px; border-top: 10px solid var(--lc); }
+.light .lamp { width: 54px; height: 54px; border-radius: 50%; background: var(--lc); box-shadow: 0 0 30px var(--lc); }
+.light h3 { color: var(--lc); font-size: 34px; } .light > p { font-size: 27px; color: var(--muted); line-height: 1.4; }
+.light ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 12px; font-size: 29px; line-height: 1.4; }
+.light li { padding: 12px 18px; border-radius: 14px; background: rgba(6,10,20,.45); }
+/* exercise (detailed) */
+.exx { display: grid; grid-template-columns: 1.45fr 1fr; gap: 36px; flex: 1; min-height: 0; }
+.exx .goal { font-size: 28px; line-height: 1.45; background: rgba(116,169,255,.08); border: 1px solid rgba(116,169,255,.3); border-radius: 20px; padding: 22px 30px; }
+.exx .srow { display: grid; grid-template-columns: 112px 1fr; gap: 20px; align-items: start; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.exx .srow:last-child { border-bottom: none; }
+.exx .time { font-family: var(--f-body); font-size: 23px; font-weight: 600; color: var(--ink); background: var(--accent); border-radius: 999px; padding: 6px 0; text-align: center; }
+.exx .srow h3 { font-size: 28px; } .exx .srow p { font-size: 24px; color: var(--muted); line-height: 1.4; margin-top: 4px; }
+.exx .rbox { border-radius: 20px; padding: 24px 30px; display: flex; flex-direction: column; gap: 12px; }
+.exx .rbox.del { background: rgba(242,180,90,.08); border: 1px solid rgba(242,180,90,.35); } .exx .rbox.del h3 { color: var(--accent-2); font-size: 29px; } .exx .rbox.del p { font-size: 27px; line-height: 1.45; }
+.exx .rbox.chk { background: rgba(82,211,167,.06); border: 1px solid rgba(82,211,167,.3); } .exx .rbox.chk h3 { color: var(--good); font-size: 29px; }
+.exx .rbox.chk ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 26px; }
+.exx .rbox.chk li { display: flex; gap: 12px; align-items: center; } .exx .rbox.chk li::before { content: ""; width: 22px; height: 22px; border: 2px solid var(--good); border-radius: 6px; flex: none; }
+.node.code { border-color: rgba(200,177,255,.5); } .node.code .who { color: #c8b1ff; }
+.node .d { margin-top: auto; font-size: 23px; line-height: 1.4; color: #d7e3ff; background: #060a14; border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; }
+
+
+/* traffic-light question */
+.q3 { display: flex; flex-direction: column; gap: 22px; }
+.q3 .qq { font-family: var(--f-display); font-size: 64px; color: var(--fg); padding: 26px 40px; border-radius: 24px; background: linear-gradient(160deg, rgba(116,169,255,.18), var(--panel)); border: 1px solid rgba(116,169,255,.45); align-self: flex-start; }
+.q3 .row { display: grid; grid-template-columns: 1.3fr 64px 220px 1fr; gap: 26px; align-items: center; padding: 22px 32px; border-radius: 20px; background: var(--panel); border: 1px solid var(--line); border-right: 10px solid var(--lc); }
+.q3 .ans { font-size: 34px; } .q3 .arr { color: var(--dim); display: grid; place-items: center; } .q3 .arr svg { width: 44px; height: 44px; }
+.q3 .res { display: flex; align-items: center; gap: 16px; font-size: 38px; font-weight: 700; color: var(--lc); }
+.q3 .res i { width: 40px; height: 40px; border-radius: 50%; background: var(--lc); box-shadow: 0 0 22px var(--lc); }
+.q3 .what { font-size: 30px; color: var(--muted); }
+.q3 .qtip { font-size: 30px; line-height: 1.45; color: var(--muted); padding: 22px 32px; border-radius: 20px; background: rgba(242,180,90,.08); border: 1px solid rgba(242,180,90,.3); margin-top: 8px; } .q3 .qtip b { color: var(--accent-2); }
+.light .role { display: flex; flex-direction: column; gap: 4px; padding: 14px 18px; border-radius: 14px; background: rgba(6,10,20,.45); }
+.light .role span { font-size: 22px; font-weight: 600; color: var(--dim); letter-spacing: .5px; } .light .role b { font-size: 29px; font-weight: 600; color: var(--fg); }
+.light .ex { font-size: 26px; line-height: 1.45; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 14px; }
+.light .ex b { color: var(--lc); font-weight: 600; }
+
+.exx .where { font-size: 21px; font-weight: 600; text-align: center; white-space: nowrap; border-radius: 999px; padding: 4px 0; }
+.exx .where.paper { color: var(--accent-2); border: 1px solid rgba(242,180,90,.5); }
+.exx .where.aitool { color: var(--good); border: 1px solid rgba(82,211,167,.5); background: rgba(82,211,167,.08); }
+/* controls */
+#bar { flex: none; display: flex; align-items: center; gap: 12px; direction: rtl; color: var(--muted); font-size: 14px; }
+#bar button { font: inherit; color: var(--fg); background: #131c35; border: 1px solid var(--line); border-radius: 10px; padding: 8px 14px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+#bar button:hover { background: #1a2547; }
+#bar button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#prog { flex: 1; height: 4px; background: #1a2440; border-radius: 4px; overflow: hidden; min-width: 40px; }
+#prog i { display: block; height: 100%; width: 0; background: linear-gradient(270deg, var(--accent), var(--accent-2)); transition: width .3s; margin-right: 0; margin-left: auto; }
+#count { font-family: var(--f-mono); font-variant-numeric: tabular-nums; direction: ltr; min-width: 64px; text-align: center; }
+#notes { flex: none; direction: rtl; background: #0e1630; border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; font-size: 16px; line-height: 1.6; color: var(--fg); max-height: 26vh; overflow: auto; }
+#notes b { color: var(--accent-2); }
+.hint { font-size: 13px; color: var(--dim); }
+@media (max-width: 700px) { .hint, .wide { display: none; } #bar button { padding: 8px 10px; } }
+/* shot: step list + mock screen */
+.shot { display: grid; grid-template-columns: 540px 1fr; gap: 44px; flex: 1; min-height: 0; }
+.shot .stp { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.shot .st { display: flex; gap: 18px; align-items: flex-start; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 16px 22px; }
+.shot .st .n { flex: none; width: 46px; height: 46px; border-radius: 50%; background: #e8693f; color: #fff; font: 700 24px var(--f-mono); display: grid; place-items: center; }
+.shot .st h3 { font-size: 28px; line-height: 1.25; }
+.shot .st p { font-size: 22px; line-height: 1.4; color: var(--muted); margin-top: 4px; }
+.shot .scr { display: flex; flex-direction: column; gap: 10px; min-width: 0; min-height: 0; }
+.shot .cap { font-size: 19px; color: var(--dim); line-height: 1.35; }
+.win { direction: ltr; text-align: left; border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,.16); box-shadow: 0 24px 60px rgba(0,0,0,.5); display: flex; flex-direction: column; flex: 1; min-height: 0; background: #faf9f5; }
+.win .bar { flex: none; height: 46px; background: #e8e5dc; display: flex; align-items: center; gap: 14px; padding: 0 16px; }
+.win .dots { display: flex; gap: 8px; } .win .dots i { width: 13px; height: 13px; border-radius: 50%; background: #ff5f57; } .win .dots i:nth-child(2) { background: #febc2e; } .win .dots i:nth-child(3) { background: #28c840; }
+.win .url { flex: 1; background: #fff; border-radius: 8px; height: 30px; font: 500 17px var(--f-mono); color: #5d5a52; display: flex; align-items: center; padding: 0 14px; }
+.win .body { flex: 1; position: relative; color: #1f1e1b; font-family: var(--f-body); font-size: 20px; overflow: hidden; }
+.mk { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: #e8693f; color: #fff; font: 700 19px var(--f-mono); box-shadow: 0 0 0 4px rgba(232,105,63,.28); vertical-align: middle; margin: 0 4px; flex: none; }
+.win .hi { outline: 3px solid #e8693f; outline-offset: 3px; border-radius: 10px; }
+.mrow { display: flex; height: 100%; }
+.mside { width: 190px; background: #f1eee6; border-right: 1px solid #e3dfd4; padding: 22px 14px; display: flex; flex-direction: column; gap: 6px; }
+.mside .mh { font-weight: 700; font-size: 18px; color: #8a867c; padding: 0 10px 8px; }
+.mside .mi { padding: 10px 12px; border-radius: 10px; display: flex; align-items: center; justify-content: space-between; }
+.mside .mi.act { background: #e4dfd2; font-weight: 600; }
+.mmain { flex: 1; padding: 22px 26px; position: relative; display: flex; flex-direction: column; gap: 14px; }
+.mtop { display: flex; align-items: center; justify-content: space-between; }
+.mt { font-family: Georgia, "Times New Roman", serif; font-size: 30px; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 10px; border: 1px solid #d6d2c6; background: #fff; font-weight: 600; font-size: 18px; }
+.btn.dark { background: #1f1e1b; color: #fff; border-color: #1f1e1b; }
+.menu { position: absolute; z-index: 2; background: #fff; border: 1px solid #ddd8cb; border-radius: 12px; box-shadow: 0 12px 30px rgba(0,0,0,.18); padding: 8px; width: 290px; display: flex; flex-direction: column; gap: 4px; }
+.menu .it { padding: 10px 12px; border-radius: 8px; display: flex; align-items: center; gap: 8px; justify-content: space-between; font-size: 19px; }
+.list { display: flex; flex-direction: column; gap: 10px; margin-top: 100px; }
+.li { display: flex; align-items: center; gap: 14px; background: #fff; border: 1px solid #e3dfd4; border-radius: 12px; padding: 12px 16px; }
+.li > span:nth-child(2) { flex: 1; } .li.big > div { flex: 1; font-size: 19px; } .li small { color: #7b776d; font-size: 15px; }
+.lg { width: 36px; height: 36px; border-radius: 9px; background: #ece7da; display: grid; place-items: center; font: 700 14px var(--f-mono); color: #6b675d; }
+.li .sts { font-size: 16px; color: #7b776d; } .li .sts.ok { color: #2f7d55; font-weight: 600; } .li > span.tog { flex: none; }
+.tog { width: 44px; height: 24px; border-radius: 12px; background: #cfcabc; position: relative; flex: none; } .tog i { position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; }
+.tog.on { background: #2f7d55; } .tog.on i { left: 23px; }
+.tagc { background: #ece7da; border-radius: 6px; padding: 2px 8px; margin-left: 6px; }
+.dim { position: absolute; inset: 0; background: rgba(30,28,24,.38); display: flex; gap: 24px; align-items: center; justify-content: center; padding: 20px; }
+.dlg { background: #fff; border-radius: 16px; padding: 22px 24px; width: 46%; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 20px 50px rgba(0,0,0,.3); }
+.dlg .dh { font-family: Georgia, serif; font-size: 24px; margin-bottom: 6px; display: flex; align-items: center; }
+.dlg label { font-size: 16px; font-weight: 600; color: #5d5a52; margin-top: 6px; display: flex; align-items: center; }
+.inp { border: 1px solid #d6d2c6; border-radius: 9px; padding: 9px 12px; font: 16px var(--f-mono); background: #fdfcf9; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.kv { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.rad { font-size: 18px; padding: 4px 0; } .rad.sel { font-weight: 700; }
+.dact { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px; }
+.chatm { position: absolute; inset: 0; }
+.greet { position: absolute; left: 0; right: 0; top: 22%; text-align: center; font-family: Georgia, serif; font-size: 34px; color: #3d3a33; }
+.comp { position: absolute; left: 30px; right: 30px; bottom: 22px; background: #fff; border: 1px solid #d9d4c7; border-radius: 18px; padding: 16px 18px; box-shadow: 0 4px 14px rgba(0,0,0,.06); }
+.comp .ph { direction: rtl; text-align: right; font-size: 21px; color: #3d3a33; }
+.crow { display: flex; align-items: center; gap: 6px; margin-top: 14px; }
+.plus { width: 38px; height: 38px; border: 1px solid #d6d2c6; border-radius: 10px; display: grid; place-items: center; font-size: 24px; }
+.send { width: 38px; height: 38px; border-radius: 10px; background: #c96442; color: #fff; display: grid; place-items: center; font-weight: 700; }
+.two { display: grid; grid-template-columns: 1fr 1fr; height: 100%; }
+.pane { padding: 22px 24px; display: flex; flex-direction: column; gap: 12px; } .pane + .pane { border-left: 1px solid #e3dfd4; background: #f6f4ee; }
+.crumb { font-size: 15px; color: #8a867c; font-weight: 600; }
+.drop { margin-top: 110px; border: 2px dashed #c9c3b3; border-radius: 14px; padding: 18px; display: flex; align-items: center; gap: 16px; background: #fff; }
+.drop b { font: 700 19px var(--f-mono); } .drop small { font: 15px/1.35 var(--f-mono); color: #7b776d; margin-left: auto; }
+.win.term { background: #0d1117; } .win.term .bar { background: #1c2128; } .win.term .url { background: #2d333b; color: #adbac7; }
+.win.term .body { padding: 22px 26px; color: #c9d1d9; }
+.win.term pre { margin: 0; font: 18.5px/1.5 var(--f-mono); white-space: pre-wrap; word-break: break-word; }
+.term .pr { color: #7ee787; } .term .cmd { color: #f0f6fc; font-weight: 500; } .term .ok { color: #c9d1d9; } .term .dimt { color: #768390; } .term .warn { color: #e3b341; } .term .cc { color: #e8a77c; }
+.term .heb { direction: rtl; unicode-bidi: isolate; display: inline-block; }
+.term .mk { width: 28px; height: 28px; font-size: 16px; }
+.msg .toolcall { direction: ltr; align-self: flex-end; font: 600 22px var(--f-mono); color: var(--good); background: rgba(82,211,167,.1); border: 1px solid rgba(82,211,167,.4); border-radius: 10px; padding: 6px 14px; margin-bottom: 6px; }
+.win.ide { background: #1e1e1e; } .win.ide .bar { background: #2d2d2d; } .win.ide .url { background: #3c3c3c; color: #ccc; }
+.idew { display: flex; height: 100%; } .exp { width: 300px; background: #252526; padding: 14px 10px; color: #ccc; font: 18px/1.2 var(--f-body); display: flex; flex-direction: column; gap: 2px; }
+.exp .eh { font-size: 14px; letter-spacing: 1px; color: #999; padding: 0 6px 10px; } .exp .f { padding: 6px 8px; border-radius: 6px; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.exp .l1 { padding-left: 26px; } .exp .l2 { padding-left: 44px; } .exp .l3 { padding-left: 62px; } .exp .l4 { padding-left: 80px; }
+.exp .hi2 { color: #f2b45a; } .exp .act { background: #37373d; color: #fff; outline: 2px solid #e8693f; }
+.ed { flex: 1; min-width: 0; display: flex; flex-direction: column; } .ed .tab { background: #1e1e1e; border-bottom: 1px solid #333; color: #fff; padding: 10px 18px; font: 17px var(--f-mono); display: flex; align-items: center; }
+.ed pre { margin: 0; padding: 18px 20px; color: #d4d4d4; font: 18px/1.6 var(--f-mono); white-space: pre-wrap; }
+.ide .heb { direction: rtl; unicode-bidi: isolate; display: inline-block; }
+.term .tt { direction: rtl; width: calc(100% - 8px); margin-top: 6px; border-collapse: collapse; font: 19px/1.35 var(--f-body); color: #c9d1d9; }
+.term .tt th { text-align: right; color: #e8a77c; font-weight: 600; padding: 6px 10px; border-bottom: 1px solid #444c56; }
+.term .tt td { text-align: right; padding: 6px 10px; border-bottom: 1px solid #2d333b; }
+</style>
+
+<div id="app">
+  <div id="viewport"><div id="stage" aria-live="polite"></div></div>
+  <div id="notes" hidden></div>
+  <div id="bar">
+    <button id="prev" type="button" aria-label="השקף הקודם">→ הקודם</button>
+    <button id="next" type="button" aria-label="השקף הבא">הבא ←</button>
+    <span id="count">1 / 1</span>
+    <div id="prog"><i></i></div>
+    <button id="notesBtn" type="button" class="wide" aria-pressed="false">הערות מרצה</button>
+    <button id="fsBtn" type="button">מסך מלא</button>
+    <span class="hint wide">חיצים או רווח לניווט · N להערות · F למסך מלא</span>
+  </div>
+</div>
+
+<script>
+const IC = {
+  brain: '<path d="M9 4a3 3 0 0 0-3 3v.5A3 3 0 0 0 4 10.4 3 3 0 0 0 5 16a3 3 0 0 0 4 3.8V4Z"/><path d="M15 4a3 3 0 0 1 3 3v.5a3 3 0 0 1 2 2.9 3 3 0 0 1-1 5.6 3 3 0 0 1-4 3.8V4Z"/>',
+  chat: '<path d="M4 5h16v11H9l-5 4V5Z"/><path d="M8 9h8M8 12h5"/>',
+  search: '<circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/>',
+  doc: '<path d="M7 3h7l5 5v13H7V3Z"/><path d="M14 3v5h5M10 13h6M10 17h6"/>',
+  chart: '<path d="M4 20V4M4 20h16"/><path d="M8 16v-4M12 16V8M16 16v-6"/>',
+  bolt: '<path d="M13 3 5 14h6l-1 7 8-11h-6l1-7Z"/>',
+  shield: '<path d="M12 3 5 6v6c0 4 3 7 7 9 4-2 7-5 7-9V6l-7-3Z"/><path d="m9 12 2 2 4-4"/>',
+  flow: '<rect x="3" y="4" width="7" height="5" rx="1"/><rect x="14" y="15" width="7" height="5" rx="1"/><path d="M6.5 9v4a2 2 0 0 0 2 2h5.5"/>',
+  target: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/>',
+  layers: '<path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>',
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>',
+  spark: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><path d="m6 6 2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/>',
+  book: '<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2V5Z"/><path d="M4 19a2 2 0 0 1 2-2h13"/>',
+  image: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-8 8"/>',
+  link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+  lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  check: '<path d="m5 12 5 5 9-10"/>',
+  eye: '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
+  list: '<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/>',
+  clock: '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>',
+  pen: '<path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="m13 7 4 4"/>',
+  repeat: '<path d="M17 2l3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="M7 22l-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/>',
+  warn: '<path d="M12 3 2 20h20L12 3Z"/><path d="M12 10v4M12 17v.5"/>',
+  users: '<circle cx="9" cy="8" r="3.5"/><path d="M2 20c.8-3.5 3.5-5.5 7-5.5s6.2 2 7 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c2 .7 3.4 2.5 4 5.2"/>',
+  mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
+};
+const ic = n => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n] || IC.spark}</svg>`;
+const ARROW = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>';
+const L = s => `<span class="ltr">${s}</span>`;
+
+/* ======================= CONTENT ======================= */
+const S = [];
+const SEC = { open: "פתיחה", p1: "מפגש 1 · מבוא ומיפוי תהליכי פיתוח", p2: "מפגש 2 · הנדסת פרומפטים למפתחות", p3: "מפגש 3 · חשיבה ותכנון תהליכים", p4: "הרחבה · MCP ו-Skills", end: "סיכום" };
+
+S.push({ t: "cover", sec: "open", note: "ברוכות הבאות למסלול המפתחות. המצגת מכסה את שלושת המפגשים הראשונים: איך מודלים עובדים ואיך עובדים איתם דרך כלי פיתוח ו-API, הנדסת פרומפטים לקוד, ותכנון תהליכי עבודה ושרשראות של מודלים. המטרה: לצאת עם הבנה טכנית אמיתית, ולא רק עם 'טיפים לצ'אט'." });
+
+S.push({ t: "cards", sec: "open", kicker: "מפת הדרך", title: "שלושה מפגשים, מסלול אחד", cols: 3,
+  cards: [
+    { i: "layers", tag: "Session 1", h: "מבוא ומיפוי תהליכי פיתוח", p: "איך LLM עובד מבפנים, קריאת API ראשונה, כלי הפיתוח המרכזיים, ואיפה AI משתלב במחזור הפיתוח." },
+    { i: "pen", tag: "Session 2", h: "הנדסת פרומפטים למפתחות", p: "פרומפט כמפרט טכני, הקשר מהקוד, פלט מובנה ב-JSON, System Prompts וקבצי הנחיות לפרויקט." },
+    { i: "flow", tag: "Session 3", h: "חשיבה ותהליכי עבודה", p: "מודלים חושבים, פירוק משימות, שרשור קריאות בקוד, לולאת סוכן, ותרשים זרימה לפרויקט." } ],
+  note: "כל מפגש בנוי על הקודם. במפגשים 4–10 נבנה מזה בוטים, RAG, חיבורי MCP ואוטומציות — ולכן חשוב שהיסודות כאן יהיו חזקים, גם ברמת הקוד." });
+
+S.push({ t: "bullets", sec: "open", kicker: "מטרות", title: "בסוף שלושת המפגשים תדעי", items: [
+    "<b>להסביר</b> איך מודל שפה עובד: טוקנים, חלון הקשר, טמפרטורה ומחיר",
+    "<b>לבצע</b> קריאת API למודל מתוך קוד Python ולשלוט בפרמטרים",
+    "<b>לבחור</b> את כלי הפיתוח הנכון: Copilot, Cursor, Claude Code, Codex, Gemini CLI",
+    "<b>לכתוב</b> פרומפטים ברמת מפרט, כולל פלט מובנה ו-System Prompt",
+    "<b>לתכנן</b> תהליך רב-שלבי עם שרשור קריאות, בדיקות ובקרה אנושית" ],
+  note: "שאלת פתיחה לכיתה: מי כבר משתמשת ב-AI כשהיא כותבת קוד? באיזה כלי? מה עבד ומה הרגיז? זה נותן תמונה של רמת הכיתה." });
+
+
+S.push({ t: "section", sec: "p1", no: "מפגש 01", n: "1", title: "מבוא ל-AI ומיפוי תהליכי פיתוח", sub: "מה קורה מאחורי הקלעים של מודל שפה, איך מדברים איתו מקוד, אילו כלים משמשים מפתחות — ואיפה בתהליך הפיתוח הם באמת חוסכים זמן.", meta: ["שעתיים אקדמיות", "API וכלי פיתוח"],
+  note: "השאלה המרכזית של המפגש: איפה AI באמת מאיץ פיתוח, ואיפה הוא מייצר חוב טכני." });
+
+S.push({ t: "cards", sec: "p1", kicker: "יסודות", title: "מה זה מודל שפה (LLM)?", lead: "רשת נוירונים מסוג Transformer שאומנה על כמויות עצומות של טקסט וקוד, כדי לחזות את הטוקן הבא. כל השאר — שיחה, קוד, ניתוח — נבנה מעל היכולת הזו.", cols: 3,
+  cards: [
+    { i: "book", h: "אימון מוקדם", p: "המודל לומד דפוסים מטקסט וקוד: תחביר, ספריות נפוצות, סגנונות. הידע 'קפוא' בתאריך מסוים (Knowledge Cutoff)." },
+    { i: "spark", h: "חיזוי טוקן אחר טוקן", p: "בכל צעד המודל מחשב התפלגות הסתברות על הטוקן הבא ובוחר ממנה. הטמפרטורה קובעת כמה 'אקראית' הבחירה." },
+    { i: "warn", h: "לא מריץ ולא בודק", p: "המודל מייצר קוד שנראה נכון — הוא לא מריץ אותו. לכן בדיקות, טייפים ו-Linter הם חובה, לא המלצה." } ],
+  note: "חשוב להפריד בין 'נשמע נכון' ל'עובד'. מודל יכול להמציא פונקציה שלא קיימת בספרייה, או להשתמש בגרסה ישנה של API, כי זה מה שראה בזמן האימון. בכלים כמו Claude Code או Codex, הסוכן כן יכול להריץ קוד — אבל רק כי חיברו לו כלים, וזה בדיוק מה שנלמד בהמשך." });
+
+S.push({ t: "compare", sec: "p1", kicker: "חוזקות ומגבלות", title: "איפה מודלים מצוינים בקוד — ואיפה הם מסוכנים",
+  left: { tone: "good", h: "מצוין ב...", items: ["קוד שגרתי (Boilerplate) ושלדים לפרויקט", "כתיבת בדיקות יחידה ומקרי קצה", "הסבר של קוד לא מוכר ו-Refactoring", "ביטויים רגולריים, SQL וסקריפטים", "תיעוד, הודעות Commit ותיאורי PR", "תרגום קוד בין שפות"] },
+  right: { tone: "bad", h: "מסוכן ב...", items: ["פונקציות וחבילות שלא קיימות (Hallucination)", "שימוש ב-API ישן של ספרייה", "חולשות אבטחה: הזרקות, סודות בקוד", "באגים לוגיים עדינים שעוברים קריאה מהירה", "החלטות ארכיטקטורה בלי הקשר מלא", "קוד שנראה טוב אבל לא נבדק"] },
+  note: "כלל הזהב: את אחראית על כל שורה שנכנסת ל-repo, גם אם לא כתבת אותה. נקודה מיוחדת: מודלים לפעמים ממציאים שמות של חבילות, ותוקפים רושמים חבילות בשמות האלה (Slopsquatting). לכן כל חבילה חדשה — בודקים שהיא קיימת ואמינה לפני התקנה." });
+
+S.push({ t: "cards", sec: "p1", kicker: "מילון מונחים", title: "שש מילים שכל מפתחת צריכה להכיר", cols: 3,
+  cards: [
+    { i: "list", tag: "Token", h: "טוקן", p: "יחידת טקסט (חלק ממילה או מקוד). לפיה נמדדים אורך הקלט, אורך הפלט והמחיר." },
+    { i: "layers", tag: "Context Window", h: "חלון הקשר", p: "כמה טוקנים המודל רואה בקריאה אחת: System, היסטוריה, קבצים ותשובה." },
+    { i: "gear", tag: "Temperature", h: "טמפרטורה", p: "שולטת באקראיות. נמוכה = עקבי וצפוי (קוד, חילוץ). גבוהה = יצירתי ומגוון." },
+    { i: "user", tag: "System Prompt", h: "הנחיית מערכת", p: "הוראות קבועות שמגדירות את התפקיד, הכללים והפורמט של המודל בכל קריאה." },
+    { i: "bolt", tag: "Tool Calling", h: "קריאה לכלים", p: "המודל מחזיר בקשה מובנית להפעיל פונקציה שלך — הבסיס לסוכנים ול-MCP." },
+    { i: "search", tag: "Embeddings", h: "וקטורים סמנטיים", p: "ייצוג מספרי של משמעות טקסט, לחיפוש לפי דמיון. הבסיס ל-RAG במפגש 5." } ],
+  note: "כל המונחים האלה יופיעו בקוד שנכתוב. טמפרטורה: לקוד ולחילוץ נתונים בדרך כלל רוצים ערך נמוך. Tool Calling ו-Embeddings הם הגשר למפגשים 5 ו-6." });
+
+S.push({ t: "flow", sec: "p1", kicker: "אנטומיה של קריאה", title: "מה קורה כשהקוד שלך פונה למודל",
+  nodes: [
+    { k: "start", who: "האפליקציה", h: "בניית בקשה", p: "System + Messages + פרמטרים" },
+    { k: "ai", who: "API", h: "שליחה ל-Endpoint", p: "אימות עם API Key, בחירת מודל" },
+    { k: "ai", who: "מודל", h: "יצירת תשובה", p: "טוקן אחר טוקן, עד max_tokens" },
+    { k: "dec", who: "תגובה", h: "טקסט או בקשת כלי", p: "stop_reason קובע מה הלאה" },
+    { k: "start", who: "האפליקציה", h: "עיבוד ובדיקה", p: "Parsing, ולידציה, שמירה" } ],
+  legend: false,
+  note: "חשוב להבין: ה-API הוא Stateless. המודל לא זוכר את השיחה — בכל קריאה שולחים את כל ההיסטוריה הרלוונטית מחדש. לכן שיחות ארוכות עולות יותר ומתקרבות לגבול חלון ההקשר." });
+
+S.push({ t: "promptbox", sec: "p1", ltr: true, kicker: "קוד ראשון", title: "קריאת API ראשונה למודל ב-Python",
+  code: String.raw`# pip install anthropic   |   export ANTHROPIC_API_KEY=...
+from anthropic import Anthropic
+
+client = Anthropic()  # reads the key from the environment
+
+response = client.messages.create(
+    model="claude-sonnet-5-5",
+    max_tokens=800,
+    temperature=0.2,
+    system="You are a senior Python reviewer. Answer in Hebrew.",
+    messages=[
+        {"role": "user", "content": "Explain what this regex does: ^\d{3}-\d{7}$"}
+    ],
+)
+
+print(response.content[0].text)
+print(response.usage)  # input / output tokens`,
+  side: [
+    { c: "var(--accent)", h: "המפתח בסביבה", p: "לעולם לא בקוד ולא ב-Git. משתמשים ב-.env ובמנהל סודות." },
+    { c: "var(--accent-2)", h: "פרמטרים", p: "model, max_tokens ו-temperature — שלושת הכפתורים הראשונים." },
+    { c: "var(--good)", h: "usage", p: "כל תגובה מחזירה כמה טוקנים נצרכו — כך מחשבים עלות." } ],
+  note: "להריץ בשיעור. אותו מבנה קיים גם ב-OpenAI ובגוגל, עם שמות שונים מעט. נקודה חשובה: מפתח API שנדחף בטעות ל-GitHub נגנב תוך דקות. מראים איך שומרים אותו במשתנה סביבה." });
+
+S.push({ t: "table", sec: "p1", kicker: "פרמטרים ועלויות", title: "הכפתורים שקובעים איכות, מהירות ומחיר",
+  head: ["פרמטר", "מה הוא קובע", "כלל אצבע"],
+  rows: [
+    ["model", "יכולת, מהירות ומחיר", "מודל קטן למשימות פשוטות, חזק למורכבות"],
+    ["max_tokens", "אורך מקסימלי לתשובה", "להגביל לפי הצורך — חוסך זמן וכסף"],
+    ["temperature", "אקראיות הפלט", "0–0.3 לקוד וחילוץ, 0.7+ לרעיונות"],
+    ["system", "תפקיד, כללים ופורמט", "קבוע לכל קריאה של אותו שימוש"],
+    ["טוקני קלט", "כל מה ששולחים, כולל היסטוריה", "לשלוח רק הקשר רלוונטי"],
+    ["טוקני פלט", "מה שהמודל מייצר", "יקרים יותר מטוקני קלט ברוב הספקים"] ],
+  note: "המחירים משתנים, אבל העיקרון קבוע: משלמים לפי טוקנים, ופלט יקר מקלט. בפרויקטים אמיתיים מודדים: כמה עולה קריאה ממוצעת, וכמה קריאות ביום. לפעמים מודל קטן וזול עושה 90% מהעבודה." });
+
+S.push({ t: "cards", sec: "p1", kicker: "נוף הכלים", title: "מפת הכלים של מפתחות", cols: 3,
+  cards: [
+    { i: "chat", h: "עוזרי צ'אט כלליים", p: L("ChatGPT · Claude · Gemini") + "<br>הסברים, תכנון, דיבאג ושאלות ארכיטקטורה." },
+    { i: "pen", h: "עוזרים בתוך ה-IDE", p: L("GitHub Copilot · Cursor") + "<br>השלמות, צ'אט ומצב סוכן בתוך העורך." },
+    { i: "gear", h: "סוכנים בטרמינל", p: L("Claude Code · Codex CLI · Gemini CLI") + "<br>עבודה על כל ה-repo, הרצת פקודות ובדיקות." },
+    { i: "link", h: "API של מודלים", p: L("Anthropic · OpenAI · Google") + "<br>בניית מוצרים ובוטים משלך." },
+    { i: "lock", h: "מודלים פתוחים ומקומיים", p: L("Ollama · Llama · Qwen · Mistral") + "<br>הרצה על המחשב או על שרת הארגון." },
+    { i: "flow", h: "תזמור ואוטומציה", p: L("n8n · LangChain · MCP") + "<br>חיבור מודלים לכלים, נתונים ותהליכים." } ],
+  note: "בשקפים הבאים נעבור על הכלים המרכזיים: במה כל אחד חזק ומתי לבחור בו. הכלים משתנים מהר, ולכן חשוב להבין את הקטגוריה — עוזר ב-IDE, סוכן בטרמינל, API — ולא רק את המותג." });
+
+S.push({ t: "tool", sec: "p1", mono: "GH", color: "#9fb3ff", name: "GitHub Copilot", by: "GitHub / Microsoft · VS Code, JetBrains, Visual Studio ו-GitHub",
+  tagline: "העוזר הנפוץ ביותר בארגונים — משולב ישירות ב-IDE וב-GitHub.",
+  best: ["השלמות קוד תוך כדי כתיבה", "צ'אט על הקוד הפתוח ב-IDE", "מצב Agent לשינויים בכמה קבצים", "סקירת Pull Requests ב-GitHub"],
+  use: ["Coding Agent — מקבל Issue ופותח PR בעצמו", "בחירה בין מודלים של כמה ספקים", "הנחיות פרויקט: .github/copilot-instructions.md", "ניהול מדיניות והרשאות לארגון"],
+  tip: "<b>מתי לבחור בו:</b> בצוות שעובד ב-GitHub וב-VS Code או JetBrains, וצריך פתרון ארגוני מנוהל עם בקרות.",
+  note: "Copilot התחיל מהשלמות קוד, והיום כולל צ'אט, סוכן ב-IDE וסוכן שעובד על Issues ופותח PR. כדאי להדגים: Issue פשוט → הקצאה לסוכן → PR לסקירה. היתרון בארגון: ניהול מרכזי ואינטגרציה מלאה עם GitHub." });
+
+S.push({ t: "tool", sec: "p1", mono: "Cu", color: "#b9c3d6", name: "Cursor", by: "עורך קוד מבוסס VS Code שנבנה סביב AI",
+  tagline: "עורך שבו ה-AI הוא חלק מהותי מהעבודה — לא תוסף.",
+  best: ["השלמות 'חכמות' שצופות את העריכה הבאה", "עריכות בכמה קבצים בבת אחת", "שאלות על כל בסיס הקוד (Codebase)", "מעבר מהיר בין מודלים"],
+  use: ["Agent — מבצע משימות ומריץ פקודות", "Rules — הנחיות קבועות לפרויקט", "Background Agents לעבודה ברקע", "תמיכה ב-MCP לחיבור כלים"],
+  tip: "<b>מתי לבחור בו:</b> כשרוצים חוויית עריכה אינטנסיבית עם AI בכל שלב, ומוכנות לעבוד בעורך ייעודי.",
+  note: "Cursor פופולרי מאוד בקרב מפתחים עצמאיים וסטארטאפים. כיוון שהוא מבוסס VS Code, ההרחבות וקיצורי המקלדת מוכרים. כדאי להראות את ה-Rules: קובץ שמגדיר את הסגנון והמוסכמות של הפרויקט, והסוכן מקפיד עליהם." });
+
+S.push({ t: "tool", sec: "p1", mono: "CC", color: "#e8a77c", name: "Claude Code", by: "Anthropic · טרמינל, IDE, דסקטופ ודפדפן",
+  tagline: "סוכן פיתוח שעובד על ה-repo כולו: קורא, מתכנן, עורך ומריץ.",
+  best: ["משימות מורכבות על פני קבצים רבים", "הבנת בסיס קוד גדול ולא מוכר", "תכנון לפני ביצוע, ואז מימוש מלא", "דיבאג עם הרצת בדיקות בלולאה"],
+  use: ["CLAUDE.md — זיכרון והנחיות לפרויקט", "MCP — חיבור למערכות וכלים חיצוניים", "Hooks ו-Subagents לתהליכים מותאמים", "הרצה ב-CI ובאוטומציות"],
+  tip: "<b>מתי לבחור בו:</b> למשימות גדולות שדורשות הבנה של כל הפרויקט, ולמי שנוחה לעבוד מהטרמינל.",
+  note: "Claude Code מייצג את דור הסוכנים: לא רק מציע קוד, אלא מבצע — עם אישור שלך על פעולות. CLAUDE.md הוא קובץ שבו כותבים איך מריצים את הפרויקט, מוסכמות ופקודות — נחזור אליו במפגש 2. הוא גם מחובר ישירות לנושא MCP במפגש 6." });
+
+S.push({ t: "tool", sec: "p1", mono: "Cx", color: "#7fd4b6", name: "OpenAI Codex", by: "OpenAI · CLI בקוד פתוח, תוסף IDE וסוכן בענן בתוך ChatGPT",
+  tagline: "סוכן הקוד של OpenAI — מקומי בטרמינל או בענן, במקביל על כמה משימות.",
+  best: ["הרצת משימות במקביל בסביבות ענן", "תיקון באגים וכתיבת פיצ'רים מתוך Issue", "סקירת קוד ושינויים מוצעים", "עבודה מקומית מהטרמינל עם Codex CLI"],
+  use: ["AGENTS.md — הנחיות פרויקט לסוכנים", "סביבות Sandbox מבודדות", "חיבור ל-GitHub ליצירת PR", "שילוב עם ChatGPT לתכנון ודיון"],
+  tip: "<b>מתי לבחור בו:</b> כשרוצים להפעיל כמה משימות פיתוח במקביל בענן, או כשהצוות כבר עובד עם ChatGPT.",
+  note: "AGENTS.md הפך לפורמט שכמה כלים מכירים — קובץ README לסוכנים. היתרון של העבודה בענן: הסוכן רץ בסביבה מבודדת, ואפשר לשלוח כמה משימות בבת אחת ולסקור את התוצאות אחר כך." });
+
+S.push({ t: "tool", sec: "p1", mono: "G", color: "#8fb4ff", name: "Gemini", by: "Google · Gemini API, AI Studio ו-Gemini CLI",
+  tagline: "חלון הקשר ענק ויכולות מולטימודליות — מצוין לקלט גדול ומגוון.",
+  best: ["ניתוח בסיסי קוד גדולים בקריאה אחת", "עבודה עם תמונות, PDF, אודיו ווידאו", "אב-טיפוס מהיר בדפדפן ב-AI Studio", "שכבת חינם נדיבה ללמידה וניסויים"],
+  use: ["Gemini CLI — סוכן קוד פתוח בטרמינל", "Gemini API ו-Vertex AI לייצור", "פלט מובנה ו-Function Calling", "חיבור לחיפוש Google לתשובות עדכניות"],
+  tip: "<b>מתי לבחור בו:</b> כשהקלט גדול מאוד (repo שלם, מסמכים ארוכים, וידאו), ולניסויים זולים בשלב הלמידה.",
+  note: "AI Studio הוא מקום מצוין ללמידה: מנסים פרומפטים, משנים פרמטרים, ומקבלים את הקוד המתאים בלחיצה. Gemini CLI הוא סוכן טרמינל בקוד פתוח, ברוח Claude Code ו-Codex CLI." });
+
+S.push({ t: "tool", sec: "p1", mono: "OL", color: "#c8b1ff", name: "Ollama", by: "הרצת מודלים פתוחים על המחשב או על שרת הארגון",
+  tagline: "מודלים בקוד פתוח, בלי שהמידע יוצא מהמחשב — ובלי עלות לכל קריאה.",
+  best: ["עבודה עם מידע רגיש שאסור להוציא", "ניסויים ופיתוח בלי עלות API", "עבודה בלי חיבור לאינטרנט", "התאמה וכוונון של מודלים קטנים"],
+  use: ["מודלים כמו Llama, Qwen, Mistral ו-gpt-oss", "API תואם OpenAI — אותו קוד, שרת אחר", "הרצה בפקודה אחת: ollama run", "שילוב עם n8n ו-LangChain"],
+  tip: "<b>מתי לבחור בו:</b> כשפרטיות קריטית, או לפיתוח ובדיקות. לרוב המשימות המורכבות, מודלי הענן עדיין חזקים יותר.",
+  note: "מודלים מקומיים מוגבלים בגודל לפי החומרה (בעיקר זיכרון כרטיס מסך), ולכן חלשים יותר מהמודלים הגדולים בענן. אבל לסיווג, חילוץ וסיכום — הם לעתים קרובות מספיקים לגמרי, והמידע לא עוזב את הארגון." });
+
+S.push({ t: "table", sec: "p1", kicker: "ספקי API", title: "השוואה בין ספקי המודלים לבניית מוצרים",
+  head: ["ספק", "חוזקות בולטות", "מתאים במיוחד ל..."],
+  rows: [
+    ["Anthropic (Claude)", "קוד, הבנת הוראות מורכבות, עבודה כסוכן", "סוכנים, עיבוד מסמכים, כלי פיתוח"],
+    ["OpenAI (GPT)", "מגוון רחב, אקוסיסטם גדול, קול ותמונה", "אפליקציות צרכניות, מולטימודלי"],
+    ["Google (Gemini)", "חלון הקשר ענק, וידאו, שכבת חינם", "קלט גדול, אב-טיפוס זול"],
+    ["מודלים פתוחים", "פרטיות, שליטה מלאה, בלי עלות לקריאה", "מידע רגיש, הרצה מקומית"] ],
+  note: "בפרויקט אמיתי לא נועלים את עצמכן על ספק אחד. בונים שכבה דקה בקוד שמאפשרת להחליף מודל — כי המודלים מתעדכנים כל כמה חודשים, והמחירים משתנים." });
+
+S.push({ t: "statement", sec: "p1", big: "לא מתחילים מהכלי.<br><em>מתחילים מהתהליך.</em>", small: "לפני שבוחרים סוכן או מודל, ממפים את מחזור הפיתוח: מה חוזר על עצמו, מה גוזל זמן, ואיפה טעות עולה הכי ביוקר.",
+  note: "גם בצוותי פיתוח, הטעות הנפוצה היא לאמץ כלי כי הוא 'חם'. אנחנו הולכות הפוך: ממפות את התהליך ומוצאות את צווארי הבקבוק." });
+
+S.push({ t: "section", sec: "p2", no: "מפגש 02", n: "2", title: "הנדסת פרומפטים למפתחות", sub: "פרומפט הוא מפרט טכני. נלמד לכתוב הנחיות מדויקות, לתת הקשר מהקוד, לקבל פלט מובנה, ולהגדיר System Prompts וקבצי הנחיות לפרויקט.", meta: ["שעתיים אקדמיות", "Advanced Prompt Engineering", "תרגול: סדרת פרומפטים"],
+  note: "המפגש הזה הוא הבסיס לכל מה שנבנה. כל בוט, סוכן ואוטומציה מתחילים בפרומפט מדויק." });
+
+S.push({ t: "prompt", sec: "p2", kicker: "למה זה חשוב", title: "אותו מודל, שתי תוצאות שונות לגמרי",
+  bad: "תכתוב פונקציה שבודקת מספר טלפון.",
+  good: '<span class="k">שפה:</span> Python 3.12, בלי ספריות חיצוניות.\n<span class="k">חתימה:</span> is_valid_il_mobile(phone: str) -> bool\n<span class="k">כללים:</span> מספר נייד ישראלי, 10 ספרות, מתחיל ב-05.\nלקבל גם מקפים ורווחים, וגם קידומת +972.\n<span class="k">פלט:</span> הפונקציה עם type hints ו-docstring,\nו-8 בדיקות pytest כולל מקרי קצה.\n<span class="k">מגבלות:</span> בלי regex מסובך — קריאות קודם.',
+  side: [],
+  note: "להריץ את שניהם בשיעור. הראשון יחזיר משהו כללי: איזו מדינה? אילו פורמטים? מה מחזירים? השני — קוד שאפשר להכניס לפרויקט, עם בדיקות. המודל לא השתנה; המפרט השתנה." });
+
+S.push({ t: "cards", sec: "p2", kicker: "המבנה", title: "שישה רכיבים של פרומפט טכני", cols: 3,
+  cards: [
+    { i: "user", tag: "Role", h: "1. תפקיד", p: "'את מפתחת Backend בכירה שמתמחה באבטחה'. מכוון את רמת התשובה." },
+    { i: "target", tag: "Task", h: "2. משימה", p: "פועל ברור והיקף מדויק: 'כתבי', 'תקני', 'הסבירי', 'סקרי'." },
+    { i: "layers", tag: "Context", h: "3. הקשר", p: "שפה וגרסה, ספריות, הקוד הרלוונטי, הודעת השגיאה, המוסכמות." },
+    { i: "list", tag: "Examples", h: "4. דוגמאות", p: "קלט ופלט לדוגמה, או קטע קוד בסגנון הרצוי." },
+    { i: "doc", tag: "Format", h: "5. פורמט", p: "רק קוד? Diff? JSON לפי סכמה? הסבר קצר ואז קוד?" },
+    { i: "shield", tag: "Constraints", h: "6. מגבלות", p: "בלי חבילות חדשות, לא לשנות API ציבורי, לשמור תאימות." } ],
+  note: "בקוד, ההקשר הוא הרכיב הכי חשוב: גרסת השפה והספריות, והקוד שמסביב. הרבה 'טעויות של המודל' הן בעצם הקשר חסר." });
+
+S.push({ t: "promptbox", sec: "p2", kicker: "דוגמה מלאה", title: "פרומפט לסקירת קוד עם כל הרכיבים",
+  code: '<span class="k">תפקיד:</span> את סוקרת קוד בכירה בצוות Backend.\n<span class="k">משימה:</span> סקרי את הפונקציה שבתגית &lt;code&gt;.\n<span class="k">הקשר:</span> Python 3.12, FastAPI, PostgreSQL דרך SQLAlchemy.\nהפונקציה מטפלת בבקשות של משתמשים לא מאומתים.\n<span class="k">פורמט:</span> טבלה עם העמודות: שורה | בעיה | חומרה | תיקון.\nחומרה: קריטי / בינוני / נמוך. בסוף — גרסה מתוקנת.\n<span class="k">מגבלות:</span> התמקדי באבטחה ובנכונות, לא בסגנון.\nאם משהו לא ברור מהקוד — כתבי שאלה, אל תניחי.\n\n<span class="t">&lt;code&gt;</span> ... <span class="t">&lt;/code&gt;</span>',
+  side: [
+    { c: "var(--accent)", h: "הקשר טכני מלא", p: "גרסה, Framework ומסד נתונים — משנים את התשובה." },
+    { c: "var(--accent-2)", h: "פורמט שימושי", p: "טבלה לפי חומרה — אפשר להעביר ישר לטיקט." },
+    { c: "var(--good)", h: "מותר לשאול", p: "'אל תניחי' מונע המצאות על קוד שלא נראה." } ],
+  note: "פרומפט כזה הוא בדיוק מה שנשמור בספריית הפרומפטים, ומאוחר יותר יהפוך לבוט סקירה ב-CI. להריץ על פונקציה עם SQL Injection מכוון ולראות שהמודל מסמן אותה כקריטית." });
+
+S.push({ t: "bullets", sec: "p2", kicker: "עקרון 1", title: "ספציפיות: לכתוב מפרט, לא משאלה", items: [
+    "<b>שפה וגרסה:</b> <span class=\"m\">'TypeScript 5, Node 22, ESM' — ולא רק 'JavaScript'</span>",
+    "<b>חתימה וטיפוסים:</b> <span class=\"m\">שם הפונקציה, פרמטרים, מה היא מחזירה ומה היא זורקת</span>",
+    "<b>מקרי קצה:</b> <span class=\"m\">קלט ריק, null, ערכים גבוהים, תווים בעברית, אזורי זמן</span>",
+    "<b>דרישות לא פונקציונליות:</b> <span class=\"m\">ביצועים, זיכרון, אבטחה, תאימות לאחור</span>",
+    "<b>הגדרת סיום:</b> <span class=\"m\">'הבדיקות עוברות, אין שינוי בממשק הציבורי, יש docstring'</span>" ],
+  note: "Definition of Done בפרומפט הוא טריק חזק במיוחד מול סוכנים: הם עובדים עד שהתנאים מתקיימים. בלי הגדרת סיום, סוכן עלול לעצור מוקדם מדי או 'לשפר' דברים שלא ביקשו." });
+
+S.push({ t: "cards", sec: "p2", kicker: "עקרון 2", title: "הקשר מהקוד: מה המודל צריך לראות", lead: "מודל לא רואה את הפרויקט שלך. כל קובץ, טיפוס או שגיאה שלא נתת לו — הוא מנחש.", cols: 2,
+  cards: [
+    { i: "doc", h: "הקבצים הרלוונטיים — לא כל ה-repo", p: "את הקובץ שמשנים, את הממשקים שהוא משתמש בהם ודוגמה לקוד דומה בפרויקט." },
+    { i: "warn", h: "השגיאה המלאה", p: "Stack trace מלא, הפקודה שהורצה והפלט — לא 'זה לא עובד'." },
+    { i: "gear", h: "סביבה וגרסאות", p: "package.json או requirements.txt, גרסת שפה, מערכת הפעלה." },
+    { i: "book", h: "מוסכמות הצוות", p: "סגנון, מבנה תיקיות, ספריות מועדפות — בקובץ הנחיות קבוע." } ],
+  note: "יותר הקשר זה לא תמיד יותר טוב: הדבקה של 50 קבצים מבלבלת את המודל ועולה הרבה טוקנים. המיומנות היא לבחור את ההקשר הנכון. סוכנים כמו Claude Code ו-Codex עושים את זה בעצמם — קוראים את הקבצים שהם צריכים." });
+
+S.push({ t: "promptbox", sec: "p2", ltr: true, kicker: "עקרון 3", title: "דוגמאות (Few-Shot): להראות את הפורמט",
+  code: String.raw`Convert each log line to JSON with keys: level, service, message.
+
+Example:
+[ERROR] payments: card declined (code 51)
+{"level": "error", "service": "payments", "message": "card declined (code 51)"}
+
+Example:
+[WARN] auth: token expires in 5 minutes
+{"level": "warn", "service": "auth", "message": "token expires in 5 minutes"}
+
+Now convert:
+[INFO] orders: order 8812 shipped`,
+  side: [
+    { c: "var(--accent)", h: "2–3 דוגמאות", p: "מספיקות כדי ליישר פורמט, שמות שדות וסגנון." },
+    { c: "var(--accent-2)", h: "לגוון", p: "דוגמאות שונות זו מזו — אחרת המודל מעתיק דפוס אחד." },
+    { c: "var(--good)", h: "גם לסגנון קוד", p: "פונקציה אחת מהפרויקט = המודל כותב 'כמו הצוות'." } ],
+  note: "Few-shot מעולה לחילוץ ולהמרת נתונים, ולשמירה על סגנון. בקוד: להדביק פונקציה קיימת מהפרויקט ולבקש 'בסגנון הזה בדיוק' — עובד הרבה יותר טוב מתיאור של חוקי סגנון." });
+
+S.push({ t: "promptbox", sec: "p2", kicker: "כלי עבודה", title: "התבנית שלך לכל פרומפט — רק למלא את החסר",
+  code: '<span class="k">תפקיד:</span> את [מפתחת Backend / סוקרת קוד / מורה לתכנות].\n\n<span class="k">משימה:</span> [פועל אחד ברור: כתבי / תקני / הסבירי / סקרי] את [מה בדיוק].\n\n<span class="k">הקשר:</span> שפה וגרסה: [Python 3.12].\nהקוד שייך ל: [מה המערכת עושה].\nמה כבר ניסיתי: [אם יש].\n\n<span class="k">דוגמה:</span> [קלט ופלט לדוגמה — אם יש].\n\n<span class="k">פורמט התשובה:</span> [רק קוד / טבלה / הסבר קצר ואז קוד].\n\n<span class="k">מגבלות:</span> [בלי ספריות חדשות / לא לשנות שמות של פונקציות].\nאם חסר לך מידע — שאלי אותי לפני שאת עונה.',
+  side: [
+    { c: "var(--accent)", h: "מעתיקים פעם אחת", p: "שומרים את התבנית בצד ומשתמשים בה בכל פעם." },
+    { c: "var(--accent-2)", h: "ממלאים רק את הסוגריים", p: "כל מה שבתוך [ ] מחליפים בפרטים של המשימה." },
+    { c: "var(--good)", h: "השורה האחרונה קבועה", p: "'שאלי לפני שאת עונה' — חוסכת המון תשובות לא נכונות." } ],
+  note: "זה השקף הכי שימושי במפגש: תבנית אחת שאפשר להשתמש בה לכל משימת קוד. כדאי לחלק אותה כקובץ לתלמידות. להדגים בשיעור: למלא אותה יחד על משימה אמיתית, למשל 'הסבירי לי למה הלולאה הזו לא נעצרת', ולהריץ." });
+
+S.push({ t: "twobox", sec: "p2", kicker: "פלט מובנה", title: "למה קוד צריך תשובה 'כמו טופס' ולא כמו מכתב",
+  lead: "בן אדם יכול לקרוא תשובה חופשית. קוד לא יכול. כשהתוכנה שלנו צריכה להשתמש בתשובה של המודל — מבקשים אותה בצורה קבועה, כמו טופס עם שדות.",
+  boxes: [
+    { tone: "bad", h: "תשובה חופשית", html: '<p class="say">"נראה שמדובר בבאג די דחוף, הלקוח לא מצליח לשלם בקופה מאז הבוקר, אז כדאי לטפל בזה מהר."</p>', cap: "נחמד לקרוא — אבל איך הקוד יידע מה הקטגוריה ומה הדחיפות?" },
+    { tone: "good", h: "תשובה מובנית (JSON)", html: '<div class="form"><div><span>סוג</span><b>באג</b></div><div><span>דחיפות</span><b>1 — דחוף</b></div><div><span>סיכום</span><b>תקלה בתשלום בקופה</b></div></div><div class="code ltr" style="font-size:22px;margin-top:14px">{"type": "bug", "priority": 1, "summary": "checkout payment fails"}</div>', cap: "הקוד קורא כל שדה בנפרד ויודע בדיוק מה לעשות." } ],
+  note: "האנלוגיה: טופס בקופת חולים מול מכתב חופשי. אם רוצים שמחשב יעבד את המידע — צריך שדות קבועים. בפרומפט כותבים: 'החזירי רק JSON עם השדות: type, priority, summary'. ובקוד בודקים שהתשובה באמת בפורמט הזה לפני שמשתמשים בה." });
+
+S.push({ t: "cards", sec: "p2", kicker: "תגיות", title: "תגיות = מעטפות עם שם", lead: "כשמדביקים למודל קוד, שגיאה והוראות ביחד — הכול מתערבב. תגיות הן כמו מעטפות: על כל מעטפה כתוב מה יש בפנים, והמודל לא מתבלבל.", cols: 3,
+  cards: [
+    { i: "target", tag: "&lt;task&gt;", h: "מעטפת המשימה", p: "מה אני רוצה שתעשי. למשל: 'מצאי למה הקוד נכשל והציעי תיקון קטן'." },
+    { i: "doc", tag: "&lt;code&gt;", h: "מעטפת הקוד", p: "הקוד עצמו, כמו שהוא. המודל יודע שזה חומר לעבודה — לא הוראה." },
+    { i: "warn", tag: "&lt;error&gt;", h: "מעטפת השגיאה", p: "הודעת השגיאה המלאה שקיבלת. ככה המודל רואה בדיוק מה קרה." } ],
+  note: "להראות על הלוח: פרומפט בלי תגיות, שבו קשה להבין איפה נגמרת ההוראה ומתחיל הקוד — ואז אותו פרומפט עם שלוש 'מעטפות'. אין צורך לזכור שמות מיוחדים: אפשר לקרוא לתגית בכל שם ברור, העיקר לפתוח ולסגור אותה." });
+
+S.push({ t: "promptbox", sec: "p2", kicker: "System Prompt", title: "ההוראות הקבועות של עוזר פיתוח צוותי",
+  code: '<span class="c"># זהות</span>\nאת עוזרת הפיתוח של צוות [שם הצוות].\n<span class="c"># הסטאק</span>\nPython 3.12, FastAPI, PostgreSQL, pytest. ממשק ב-React + TypeScript.\n<span class="c"># כללים</span>\n- כל קוד חדש עם type hints ובדיקות pytest.\n- אין חבילות חדשות בלי לשאול.\n- אם חסר הקשר — שאלי לפני שאת כותבת קוד.\n- לעולם אל תכתבי סודות או מפתחות בקוד.\n<span class="c"># פורמט</span>\nהסבר של עד 3 שורות, ואז הקוד. שינוי בקובץ קיים — כ-Diff.',
+  side: [
+    { c: "var(--accent)", h: "ב-API", p: "פרמטר system בכל קריאה." },
+    { c: "var(--accent-2)", h: "בצ'אט", p: L("Projects · GPTs · Gems") },
+    { c: "var(--good)", h: "הבסיס למפגש 4", p: "שם נבנה בוט מלא סביב System Prompt כזה." } ],
+  note: "System Prompt טוב מגדיר: מי, באיזה סטאק, אילו כללים, ובאיזה פורמט. שימו לב לכלל 'שאלי לפני שאת כותבת' — הוא חוסך הרבה קוד מיותר. הסוגריים המרובעים הם משתנים שממלאים לכל צוות." });
+
+S.push({ t: "cards", sec: "p2", kicker: "קובץ הנחיות לפרויקט", title: "דף קליטה לעובדת חדשה — רק לסוכן", lead: "כשעובדת חדשה מגיעה, נותנים לה דף: איך מפעילים את הפרויקט ומה הכללים. לכלי AI נותנים בדיוק את אותו דף — קובץ שנמצא בתיקיית הפרויקט, והכלי קורא אותו לבד.", cols: 2,
+  cards: [
+    { i: "gear", h: "איך מריצים", p: "'כדי להריץ בדיקות: pytest'. ככה הסוכן יכול לבדוק את עצמו." },
+    { i: "layers", h: "איפה מה נמצא", p: "'הלוגיקה בתיקיית services, המסכים בתיקיית ui'." },
+    { i: "check", h: "כללי הצוות", p: "'כל פונקציה חדשה עם בדיקה', 'סכומי כסף רק ב-Decimal'." },
+    { i: "lock", h: "מה אסור", p: "'לא להוסיף ספריות בלי לשאול', 'לא לגעת בקבצי ההגדרות'." } ],
+  note: "שם הקובץ תלוי בכלי: CLAUDE.md ב-Claude Code, AGENTS.md ב-Codex ובכלים נוספים, ו-copilot-instructions.md ב-GitHub Copilot. התוכן דומה בכולם. זה 'ניצחון מהיר': רבע שעה של כתיבה, וכל עבודה עם הסוכן משתפרת." });
+
+S.push({ t: "hsteps", sec: "p2", kicker: "איטרציה ובדיקה", title: "פרומפט הוא קוד: בודקים אותו כמו קוד", cols: 4,
+  steps: [
+    { h: "סט בדיקות", p: "10–30 קלטים אמיתיים, כולל מקרים קשים וחריגים." },
+    { h: "הרצה", p: "מריצים את הפרומפט על כל הסט ושומרים את הפלטים." },
+    { h: "הערכה", p: "קריטריונים ברורים: פורמט תקין, תשובה נכונה, אורך." },
+    { h: "השוואה", p: "כל שינוי בפרומפט — מריצים שוב ובודקים שלא נשבר כלום." } ],
+  note: "בעולם המקצועי קוראים לזה Evals. במקום 'נראה לי שזה עובד טוב יותר', מודדים. זה קריטי כשהפרומפט נמצא בתוך מוצר: שינוי קטן יכול לשפר מקרה אחד ולשבור עשרה אחרים." });
+
+S.push({ t: "cards", sec: "p2", kicker: "טכניקות מתקדמות", title: "ארגז הכלים של מהנדסת פרומפטים", cols: 3,
+  cards: [
+    { i: "list", tag: "Plan First", h: "תוכנית לפני קוד", p: "'כתבי תוכנית: אילו קבצים ישתנו ולמה. אל תכתבי קוד עד שאאשר'." },
+    { i: "check", tag: "Test First", h: "בדיקות קודם", p: "'כתבי קודם בדיקות שנכשלות, ורק אחר כך מימוש שגורם להן לעבור'." },
+    { i: "eye", tag: "Self-Review", h: "סקירה עצמית", p: "'סקרי את הקוד שכתבת: אבטחה, מקרי קצה, ביצועים. ותקני'." },
+    { i: "layers", tag: "Alternatives", h: "כמה פתרונות", p: "'הציעי 3 גישות עם יתרונות וחסרונות, לפני שבוחרים'." },
+    { i: "flow", tag: "Prompt Chaining", h: "שרשור", p: "פלט של קריאה אחת הוא קלט של הבאה — הנושא של מפגש 3." },
+    { i: "spark", tag: "Meta-Prompting", h: "פרומפט שכותב פרומפט", p: "'עזרי לי לכתוב System Prompt לבוט סקירה — שאלי אותי מה צריך'." } ],
+  note: "Plan First ו-Test First הם שני ההרגלים שהכי משפרים עבודה עם סוכני קוד. תוכנית לפני קוד מאפשרת לתפוס כיוון שגוי לפני שנכתבו 500 שורות. בדיקות קודם נותנות לסוכן יעד ברור לבדוק את עצמו." });
+
+S.push({ t: "table", sec: "p2", kicker: "טעויות נפוצות", title: "מה משבש עבודה עם מודלים — ואיך מתקנים",
+  head: ["הטעות", "מה קורה", "התיקון"],
+  rows: [
+    ["'זה לא עובד, תתקן'", "ניחושים ושינויים אקראיים", "שגיאה מלאה + מה ציפית שיקרה"],
+    ["הדבקת כל ה-repo", "בלבול, עלות גבוהה, תשובה כללית", "רק הקבצים והממשקים הרלוונטיים"],
+    ["אמון בשם של פונקציה או חבילה", "קוד שלא רץ, או חבילה זדונית", "לבדוק בתיעוד וב-registry"],
+    ["לא מריצים את הקוד", "באגים עוברים ל-main", "בדיקות, Linter ו-CI תמיד"],
+    ["שיחה ארוכה מאוד", "המודל 'שוכח' הוראות מוקדמות", "שיחה חדשה עם סיכום והקשר"],
+    ["משימה ענקית בפרומפט אחד", "פתרון חלקי ושטחי", "לפרק לשלבים עם בדיקה בכל שלב"] ],
+  note: "הטעות השלישית מסוכנת במיוחד: מודל יכול להמציא פונקציה שנשמעת סבירה לגמרי. כלל: כל API שאת לא מכירה — בודקים בתיעוד הרשמי." });
+
+S.push({ t: "table", sec: "p2", kicker: "לפני ואחרי", title: "שלושה תיקונים קטנים — הבדל ענק בתשובה",
+  head: ["לפני", "אחרי", "למה זה עזר"],
+  rows: [
+    ["'הקוד לא עובד, תתקני'", "'מופיעה השגיאה הזו: [שגיאה]. ציפיתי שהפונקציה תחזיר 10'", "המודל רואה מה קרה ומה רצית — במקום לנחש"],
+    ["'תכתבי פונקציה למיון'", "'פונקציה ב-Python שממיינת רשימת מוצרים לפי מחיר, מהזול ליקר'", "ברור מה נכנס, מה יוצא ובאיזו שפה"],
+    ["'תסבירי את הקוד'", "'הסבירי לי את הקוד כמו למתחילה, שורה אחרי שורה, בעברית'", "התשובה מותאמת לרמה ולשפה שלך"] ],
+  note: "לתת לכיתה לנחש את העמודה 'אחרי' לפני שחושפים. המסר: לא צריך פרומפט ארוך ומסובך — צריך להוסיף את המידע שחסר למודל. שלושת התיקונים: להראות את השגיאה, להגיד מה נכנס ומה יוצא, ולהגיד למי התשובה מיועדת." });
+
+S.push({ t: "exx", sec: "p2", n: "2", title: "תרגול 2: משפרים פרומפט עד שהוא מצוין",
+  goal: "בוחרים משימת קוד אחת, כותבים לה פרומפט לפי התבנית, ומשפרים אותו פעמיים — עד שהתשובה טובה באמת.",
+  steps: [
+    { time: "5 דק׳", h: "בחרי משימה אחת", p: "סקירת קוד, הסבר של שגיאה, או כתיבת בדיקות — על קוד שהמרצה נותנת." },
+    { time: "10 דק׳", h: "כתבי פרומפט לפי התבנית", p: "מלאי את ששת הרכיבים: תפקיד, משימה, הקשר, דוגמה, פורמט ומגבלות." },
+    { time: "5 דק׳", h: "הריצי ושמרי את התשובה", p: "בכלי שנוח לך: ChatGPT, Claude או Gemini." },
+    { time: "10 דק׳", h: "שפרי פעמיים", p: "בדקי מול הצ'קליסט, תקני את הפרומפט והריצי שוב." },
+    { time: "5 דק׳", h: "השווי וסכמי", p: "מה השינוי שהכי שיפר את התשובה? משפט אחד." } ],
+  deliver: "הפרומפט הראשון, הפרומפט הסופי, ומשפט אחד: מה עשה את ההבדל.",
+  check: ["ברור מה התפקיד ומה המשימה", "כתבתי שפה וגרסה", "הקוד נמצא בתוך תגית", "ביקשתי פורמט מוגדר לתשובה", "יש לפחות מגבלה אחת", "התשובה השתפרה בין הגרסאות"],
+  note: "לעבוד בזוגות: אחת כותבת, השנייה בודקת מול הצ'קליסט, ואז מתחלפות. סה\"כ 35 דקות. להכין מראש קטע קוד קצר עם באג אחד ברור (למשל חישוב הנחה שנותן תוצאה שלילית) כדי שלכולן יהיה על מה לעבוד." });
+
+S.push({ t: "promptbox", sec: "p2", kicker: "תרגול 2 · דוגמה לפתרון", title: "כך נראה פרומפט סופי טוב",
+  code: '<span class="k">תפקיד:</span> את סוקרת קוד שמסבירה בצורה פשוטה.\n<span class="k">משימה:</span> מצאי למה הפונקציה מחזירה מחיר שלילי, והציעי תיקון.\n<span class="k">הקשר:</span> Python 3.12. הפונקציה מחשבת מחיר אחרי קופון הנחה.\nציפיתי שמחיר 50 עם קופון של 80 יחזיר 0 — אבל קיבלתי 30-.\n<span class="k">פורמט:</span> 1. הסבר הבעיה בשני משפטים. 2. הקוד המתוקן.\n3. שתי בדיקות pytest שמוכיחות שזה עובד.\n<span class="k">מגבלות:</span> אל תשני את שם הפונקציה.\n\n<span class="t">&lt;code&gt;</span>\ndef final_price(price, coupon):\n    return price - coupon\n<span class="t">&lt;/code&gt;</span>',
+  side: [
+    { c: "var(--accent)", h: "מה ציפיתי ומה קיבלתי", p: "זה החלק שהכי עוזר למודל להבין את הבעיה." },
+    { c: "var(--accent-2)", h: "פורמט בשלושה חלקים", p: "הסבר, קוד ובדיקות — קל לבדוק כל חלק." },
+    { c: "var(--good)", h: "בדיקות כחלק מהתשובה", p: "ככה רואים מיד שהתיקון באמת עובד." } ],
+  note: "להראות את הדוגמה הזו רק אחרי שהתלמידות ניסו בעצמן. כדאי להשוות לגרסה הראשונה שלהן ולשאול: מה חסר אצלכן? בדרך כלל התשובה היא 'מה ציפיתי ומה קיבלתי'." });
+
+S.push({ t: "section", sec: "p3", no: "מפגש 03", n: "3", title: "תכנון תהליכי עבודה עם AI", sub: "איך לוקחים משימה גדולה ומפרקים אותה לשלבים קטנים וברורים — ומחליטים בכל שלב מי עושה אותו: המודל, הקוד או אנחנו.", meta: ["שעתיים אקדמיות", "תרגול: תכנון תהליך"],
+  note: "המפגש הזה עוסק בשאלה אחת: איך עובדים עם AI על משימה גדולה, ולא רק על שאלה אחת. נלך לאט, עם הרבה דוגמאות." });
+
+S.push({ t: "statement", sec: "p3", big: "משימה גדולה =<br><em>הרבה משימות קטנות.</em>", small: "כמו מתכון: לא כותבים 'תכיני עוגה', אלא 'מערבבים קמח וסוכר, מוסיפים ביצים, אופים 30 דקות'. גם עם AI — הולכים שלב אחרי שלב.",
+  note: "האנלוגיה של המתכון עובדת מצוין. אם מבקשים מהמודל 'תבני לי אתר שלם' — מקבלים משהו כללי ומלא טעויות. אם מבקשים שלב אחד בכל פעם — כל שלב יוצא טוב, ואפשר לבדוק אותו." });
+
+S.push({ t: "compare", sec: "p3", kicker: "למה לפרק?", title: "פרומפט אחד ענק מול כמה שלבים קטנים",
+  left: { tone: "bad", h: "פרומפט אחד ענק", items: ["המודל 'שוכח' חלק מהדרישות", "אם יש טעות — לא ברור איפה", "קשה לבדוק תוצאה גדולה בבת אחת", "כל תיקון מחייב להתחיל מחדש"] },
+  right: { tone: "good", h: "כמה שלבים קטנים", items: ["כל שלב מקבל תשומת לב מלאה", "רואים בדיוק איפה הייתה הטעות", "בודקים כל שלב לפני שממשיכים", "מתקנים רק את השלב שנכשל"] },
+  note: "לשאול את הכיתה: מי ביקשה פעם מ-AI משהו גדול וקיבלה תוצאה חצי טובה? ברוב המקרים הפתרון הוא לא פרומפט ארוך יותר — אלא לפרק." });
+
+S.push({ t: "cards", sec: "p3", kicker: "איזה מודל לבחור", title: "מודל מהיר או מודל שחושב?", compact: true, lead: "מודל שחושב הוא כמו תלמידה שפותרת עם דף טיוטה: לוקח לה יותר זמן, אבל בבעיות מסובכות היא טועה הרבה פחות.", cols: 2,
+  cards: [
+    { i: "bolt", h: "מודל מהיר", p: "לשאלות קצרות, תרגום, ניסוח, סיווג פשוט. עונה מיד ועולה פחות." },
+    { i: "brain", h: "מודל שחושב", p: "לתכנון, באג מסובך, השוואה בין פתרונות, אלגוריתם. חושב לפני שעונה." },
+    { i: "check", h: "איך מחליטים?", p: "שאלי את עצמך: אם הייתי פותרת את זה בעצמי — הייתי צריכה דף טיוטה? אם כן — מודל שחושב." },
+    { i: "clock", h: "המחיר", p: "מודל שחושב איטי ויקר יותר. לכן לא משתמשים בו לכל דבר קטן." } ],
+  note: "ב-ChatGPT, ב-Claude וב-Gemini אפשר לבחור מצב 'חשיבה'. בתהליך עבודה משלבים: מודל שחושב לתכנון, ומודל מהיר לשלבים הפשוטים. זה חוסך זמן וכסף." });
+
+S.push({ t: "chat", sec: "p3", kicker: "שיטה", title: "קודם תוכנית, אחר כך קוד — שיחה לדוגמה",
+  msgs: [
+    { who: "me", text: "צריך להוסיף לאתר אפשרות 'שכחתי סיסמה'. לפני שאת כותבת קוד — כתבי תוכנית קצרה ועצרי." },
+    { who: "ai", text: "התוכנית: 1. טופס עם שדה מייל. 2. יצירת קישור לאיפוס, בתוקף ל-30 דקות. 3. שליחת הקישור במייל. 4. דף לבחירת סיסמה חדשה. 5. בדיקות. שאלה: יש כבר בפרויקט שירות לשליחת מיילים?" },
+    { who: "me", text: "כן, יש. ותשני את התוקף ל-15 דקות. אפשר להתחיל בשלב 1." },
+    { who: "ai", text: "מעולה. מתחילה בשלב 1: הטופס והבדיקה שלו." } ],
+  side: [
+    { c: "var(--accent)", h: "רואים את הכיוון מראש", p: "אם התוכנית לא נכונה — מתקנים לפני שנכתב קוד." },
+    { c: "var(--accent-2)", h: "המודל שואל", p: "במקום לנחש, הוא מברר את מה שחסר לו." },
+    { c: "var(--good)", h: "את מחליטה", p: "את מאשרת את התוכנית, ורק אז מתחילים." } ],
+  note: "זו השיטה החשובה ביותר במפגש. במקום לבקש קוד מיד — מבקשים תוכנית, קוראים, מתקנים, ורק אז מאשרים. כדאי להדגים את השיחה הזו בכלי אמיתי מול הכיתה." });
+
+S.push({ t: "cards", sec: "p3", kicker: "איך מפרקים", title: "ארבע שאלות שמפרקות כל משימה", compact: true, cols: 2,
+  cards: [
+    { i: "target", tag: "1", h: "מה התוצאה הסופית?", p: "מה צריך להיות בסוף? למשל: 'כל פנייה של לקוח מקבלת תשובה תוך שעה'." },
+    { i: "list", tag: "2", h: "מה השלבים בדרך?", p: "רושמים את הצעדים לפי הסדר — כמו מתכון." },
+    { i: "doc", tag: "3", h: "מה נכנס ומה יוצא בכל שלב?", p: "כל שלב מקבל משהו ומוציא משהו. הפלט של שלב אחד הוא הקלט של הבא." },
+    { i: "check", tag: "4", h: "איך יודעים שהשלב הצליח?", p: "לכל שלב — דרך לבדוק. אם אין דרך לבדוק, זה סימן שהשלב לא מספיק ברור." } ],
+  note: "ארבע השאלות האלה הן כל השיטה. בתרגול נענה עליהן בטבלה. השאלה הרביעית היא החשובה ביותר: היא מה שהופך תהליך של AI לאמין." });
+
+S.push({ t: "flow", sec: "p3", kicker: "דוגמה מהחיים", title: "פנייה של לקוחה בחנות אונליין — שלב אחרי שלב",
+  nodes: [
+    { k: "start", who: "נכנס", h: "הודעה מהלקוחה", p: "", d: "\"ההזמנה שלי הגיעה שבורה, אפשר להחליף?\"" },
+    { k: "ai", who: "AI", h: "1. מבין את הבקשה", p: "", d: "סוג: החלפה · דחיפות: רגילה" },
+    { k: "code", who: "קוד", h: "2. מוצא את ההזמנה", p: "", d: "הזמנה 4471 · נמסרה לפני 3 ימים" },
+    { k: "ai", who: "AI", h: "3. מנסח תשובה", p: "", d: "\"מצטערים! נשלח מוצר חדש מחר...\"" },
+    { k: "human", who: "אדם", h: "4. מאשרת ושולחת", p: "", d: "קוראת, מתקנת אם צריך, שולחת" } ],
+  legend: true,
+  note: "שימו לב לשורה התחתונה בכל שלב: זה מה שעובר הלאה. ה-AI לא עושה הכול — שלב 2 הוא קוד רגיל שמחפש במסד הנתונים, ושלב 4 הוא אדם. כך בונים תהליך: כל אחד עושה את מה שהוא הכי טוב בו." });
+
+S.push({ t: "flow", sec: "p3", kicker: "מה זה סוכן", title: "סוכן = מתמחה עם ארגז כלים", lead: "לסוכן נותנים מטרה ורשימת כלים (לחפש בקבצים, להריץ בדיקות, לשלוח מייל). הוא מחליט לבד באיזה כלי להשתמש — ובודק את התוצאה.",
+  nodes: [
+    { k: "start", who: "1", h: "מקבל מטרה", p: "'תקני את הבאג בטופס ההרשמה'" },
+    { k: "ai", who: "2", h: "בוחר כלי", p: "'אחפש את הקובץ של הטופס'" },
+    { k: "code", who: "3", h: "מפעיל ורואה תוצאה", p: "הכלי מחזיר את הקוד שנמצא" },
+    { k: "dec", who: "4", h: "ממשיך או מסיים?", p: "אם לא סיים — חוזר לשלב 2" } ],
+  legend: false,
+  note: "הדרך הכי פשוטה להסביר סוכן: מתמחה חכם. הוא לא יודע הכול מראש, אבל יודע להשתמש בכלים, לראות מה קרה ולהחליט על הצעד הבא. Claude Code, Codex ו-Copilot Agent עובדים בדיוק כך. במפגש 6 נחבר לסוכן כלים משלנו." });
+
+S.push({ t: "q3", sec: "p3", kicker: "בקרה אנושית · הרמזור", title: "שאלה אחת שמחליטה מי עושה את העבודה",
+  q: "מה יקרה אם ה-AI יטעה כאן?",
+  rows: [
+    { c: "good", ans: "כמעט כלום — מתקנים בשנייה", res: "ירוק", what: "ה-AI עובד לבד" },
+    { c: "amber", ans: "מישהו מבחוץ יראה את הטעות", res: "צהוב", what: "ה-AI מכין — את מאשרת" },
+    { c: "bad", ans: "נפסיד כסף או מידע, ואי אפשר לבטל", res: "אדום", what: "רק את מחליטה ומבצעת" } ],
+  tip: "<b>כשלא בטוחים</b> — בוחרים את הצבע הזהיר יותר. תמיד אפשר להקל אחר כך, כשרואים שה-AI מצליח.",
+  note: "זה כל הרעיון של הרמזור: לפני שנותנים ל-AI משימה, שואלים שאלה אחת — מה יקרה אם הוא יטעה? התשובה קובעת את הצבע. לתרגל עם הכיתה: לזרוק משימות ('לתרגם הודעת שגיאה', 'לשלוח מייל ללקוח', 'למחוק משתמשים ישנים') ולתת להן לענות באיזה צבע." });
+
+S.push({ t: "lights", sec: "p3", kicker: "בקרה אנושית · הרמזור", title: "בכל צבע: מה ה-AI עושה ומה את עושה",
+  cols: [
+    { c: "good", h: "ירוק", ai: "עושה את כל העבודה לבד", me: "מציצה מדי פעם שהכול תקין", ex: "ה-AI ממיין 200 פניות לפי נושא. טעה בפנייה אחת? מזיזים אותה — וזהו." },
+    { c: "amber", h: "צהוב", ai: "מכין טיוטה", me: "קוראת, מתקנת ומאשרת לפני שזה יוצא", ex: "ה-AI כותב תשובה ללקוחה. את קוראת אותה, מתקנת אם צריך, ורק אז שולחת." },
+    { c: "bad", h: "אדום", ai: "לכל היותר ממליץ", me: "מחליטה ומבצעת בעצמך", ex: "לקוחה מבקשת החזר של 500 ₪. ה-AI יכול לסכם את המקרה — אבל רק את מאשרת." } ],
+  note: "עכשיו רואים בכל צבע את חלוקת העבודה. ירוק: ה-AI עושה הכול. צהוב: ה-AI עושה 90% מהעבודה, ואת נותנת את האישור הסופי. אדום: ההחלטה וההפעלה אצלך בלבד. בקוד זה נראה כך: בצהוב — הסוכן פותח Pull Request ואת מאשרת; באדום — לסוכן בכלל אין הרשאה למחוק או לשלם." });
+
+S.push({ t: "steps", sec: "p3", kicker: "מניעת טעויות", title: "שלוש בדיקות שתופסות את רוב הטעויות",
+  steps: [
+    { h: "בדיקת צורה", p: "האם התשובה הגיעה בפורמט שביקשנו? למשל: האם יש את כל השדות בטופס? אם לא — מבקשים שוב." },
+    { h: "בדיקת תוכן", p: "האם התשובה נכונה? בקוד — מריצים בדיקות. במידע — משווים למקור. לא מסתפקים ב'נשמע נכון'." },
+    { h: "בדיקה אנושית", p: "לפני שמשהו יוצא החוצה — עין אנושית. זה הצהוב והאדום ברמזור." } ],
+  note: "שלוש בדיקות פשוטות, לפי הסדר. הראשונה אוטומטית ומהירה, השנייה דורשת בדיקות או מקור, והשלישית היא אנחנו. ככל שהשלבים הראשונים טובים יותר, לאדם נשאר פחות לתקן." });
+
+S.push({ t: "exx", sec: "p3", n: "מסכם", title: "תרגול מסכם: בונות 'מורה פרטית' לתכנות",
+  goal: "בונות בוט שנותן לתלמידה שנתקעה בתרגיל <b>רמז, לא פתרון</b>. חלקים 1–3 כותבים בדף. רק בבדיקה עוברים לכלי AI.",
+  steps: [
+    { time: "5 דק׳", where: "בדף", h: "חלק 1 · בוחרות כלי (מפגש 1)", p: "באיזה כלי נשתמש (ChatGPT, Claude או Gemini), ומשפט אחד למה." },
+    { time: "15 דק׳", where: "בדף", h: "חלק 2 · משלימות את הכללים (מפגש 2)", p: "בתבנית שבשקף הבא: שפה, שנה, ושני כללים משלך לבוט." },
+    { time: "5 דק׳", where: "בדף", h: "חלק 3 · משלימות את סדר העבודה (מפגש 3)", p: "באותה תבנית: ממלאות את שלבים 2 ו-3 בחלק 'סדר קבוע'." },
+    { time: "15 דק׳", where: "בכלי AI", h: "בודקות את הבוט", p: "שיחה חדשה ← מדביקות את כל ההוראות ← שולחות את 3 הודעות הבדיקה (שקף 51) ← מסמנות בדף: עבר / לא עבר." },
+    { time: "5 דק׳", where: "בכלי AI", h: "משפרות ומציגות", p: "בדיקה נכשלה? מתקנות, בודקות שוב בשיחה חדשה, ומספרות לכיתה מה תיקנו." } ],
+  deliver: "שם הכלי ונימוק במשפט, ההוראות המלאות לבוט, וטבלת 3 הבדיקות עם 'עבר' או 'לא עבר'.",
+  check: ["הבוט לא כותב פתרון מלא", "הבוט שואל קודם מה ניסית", "הבוט נותן רמז אחד בכל פעם", "הבוט מסרב בנימוס ל'תפתרי לי'", "הבוט מסביר בפשטות כשלא מבינים", "שלוש הבדיקות עברו"],
+  note: "חשוב להבהיר לכיתה: חלקים 1–3 נכתבים בדף או במסמך (עוד לא בכלי). רק בשלב הבדיקה עוברים לכלי AI ומדביקים בו את ההוראות. התרגול מחבר את שלושת המפגשים לתוצר אחד: בוט שעובד. הוא גם מתחבר למסר החשוב של הקורס — AI שעוזר ללמוד, לא שלומד במקומך. סה\"כ 45 דקות, בזוגות. השקפים הבאים: התבנית להשלמה, ההודעות לבדיקה, ודוגמה לפתרון (להראות רק בסוף)." });
+
+S.push({ t: "promptbox", sec: "p3", kicker: "תרגול מסכם · חלק 2 ו-3", title: "ההוראות לבוט: משלימות את החסר",
+  code: '<span class="k">מי את:</span> את מורה פרטית לתכנות ב-[שפה] לתלמידות [איזו שנה].\n<span class="k">המטרה שלך:</span> לעזור לתלמידה להבין לבד — לא לפתור במקומה.\n<span class="k">כללים:</span>\n- לעולם אל תכתבי את הפתרון המלא.\n- [כלל שלך: ____________]\n- [כלל שלך: ____________]\n<span class="k">סדר קבוע בכל תשובה:</span>\n1. שאלי מה התלמידה כבר ניסתה.\n2. [____________]\n3. [____________]\n4. עצרי וחכי לניסיון הבא שלה.\n<span class="k">איך את מדברת:</span> [חם? קצר? בעברית פשוטה?]',
+  side: [
+    { c: "var(--accent)", h: "כל מה שבסוגריים — את משלימה", p: "השאר כבר כתוב, כדי שיהיה קל להתחיל." },
+    { c: "var(--accent-2)", h: "הכללים — מפגש 2", p: "מה מותר ומה אסור לבוט. למשל: 'רמז אחד בכל פעם'." },
+    { c: "var(--good)", h: "הסדר הקבוע — מפגש 3", p: "4 שלבים שחוזרים בכל תשובה, כמו מתכון." } ],
+  note: "לתת לתלמידות להעתיק את התבנית (כדאי לשלוח אותה בקבוצה לפני השיעור). רמז למי שנתקעת בשלבים 2–3: 'מה הבוט צריך לעשות אחרי שהוא יודע מה ניסית?' — למצוא איפה הטעות, ואז לתת רמז אחד." });
+
+S.push({ t: "table", sec: "p3", kicker: "תרגול מסכם · בדיקה", title: "שלוש הודעות לבדיקה: האם הבוט מתנהג נכון?",
+  head: ["#", "מה התלמידה כותבת לבוט", "מה הבוט אמור לעשות", "עבר?"],
+  rows: [
+    ["1", "\"הקוד לא עובד:\" <span class=\"ltr\" style=\"font-family:var(--f-mono)\">for i in range(5) print(i)</span>", "לשאול מה ניסתה, ולרמוז שחסר משהו בסוף השורה — בלי לכתוב את הקוד המתוקן", "____"],
+    ["2", "\"פשוט תכתבי לי את כל הפתרון לתרגיל 5\"", "לסרב בנימוס, ולהציע להתחיל יחד מהצעד הראשון", "____"],
+    ["3", "\"לא הבנתי מה זה לולאה\"", "להסביר בשני משפטים פשוטים, עם דוגמה קטנה מהחיים", "____"] ],
+  note: "בדיקה 2 היא החשובה ביותר: היא בודקת שהבוט באמת לא פותר במקום התלמידה. אם הבוט נכשל בה — מוסיפים להוראות כלל ברור יותר ובודקים שוב. זה בדיוק מה שלמדנו במפגש 2: איטרציה." });
+
+S.push({ t: "promptbox", sec: "p3", kicker: "תרגול מסכם · דוגמה לפתרון", title: "כך נראות הוראות מלאות לבוט",
+  code: '<span class="k">מי את:</span> את מורה פרטית לתכנות ב-Python לתלמידות שנה א\'.\n<span class="k">המטרה שלך:</span> לעזור לתלמידה להבין לבד — לא לפתור במקומה.\n<span class="k">כללים:</span>\n- לעולם אל תכתבי את הפתרון המלא.\n- תני רק רמז אחד בכל תשובה.\n- אם מבקשים ממך לפתור — סרבי בנימוס והציעי לעבוד יחד.\n<span class="k">סדר קבוע בכל תשובה:</span>\n1. שאלי מה התלמידה כבר ניסתה.\n2. הסבירי במשפט אחד איפה נמצאת הבעיה.\n3. תני רמז אחד שיעזור לה לתקן לבד.\n4. עצרי וחכי לניסיון הבא שלה.\n<span class="k">איך את מדברת:</span> חם ומעודד, עד 4 משפטים, בעברית פשוטה.',
+  side: [
+    { c: "var(--accent)", h: "כלל הסירוב", p: "בזכותו בדיקה 2 עוברת." },
+    { c: "var(--accent-2)", h: "רמז אחד בלבד", p: "התלמידה ממשיכה לחשוב בעצמה." },
+    { c: "var(--good)", h: "סדר קבוע", p: "כל תשובה של הבוט צפויה וברורה." } ],
+  note: "להראות רק אחרי שהזוגות סיימו ובדקו. להשוות עם מה שהן כתבו: מה דומה, מה שונה? ולהדגיש — הבוט הזה הוא בדיוק סוג הבוט שנבנה במפגש 4, רק שם נוסיף לו ידע וכלים." });
+
+/* ======================= הרחבה: MCP ו-Skills (מאפס) ======================= */
+const MK = n => `<b class="mk">${n}</b>`;
+const WIN = (url, body) => `<div class="win"><div class="bar"><span class="dots"><i></i><i></i><i></i></span><span class="url">${url}</span></div><div class="body">${body}</div></div>`;
+const TERM = (title, lines) => `<div class="win term"><div class="bar"><span class="dots"><i></i><i></i><i></i></span><span class="url">${title}</span></div><div class="body"><pre>${lines}</pre></div></div>`;
+const P$ = c => `<span class="pr">~/my-project $</span> <span class="cmd">${c}</span>`;
+const TOG = on => `<span class="tog${on ? " on" : ""}"><i></i></span>`;
+const SIDE = (act, mark) => `<div class="mside"><div class="mh">Customize</div>${["Skills", "Connectors"].map(x => `<div class="mi${x === act ? " act" : ""}">${x}${x === act && mark ? " " + MK(1) : ""}</div>`).join("")}</div>`;
+const LT = t => `<span class='ltr'>${t}</span>`;
+const CAP_UI = "איור להמחשה לפי ההוראות הרשמיות של Claude (אוקטובר 2026). המסך אצלכן עשוי להיראות מעט שונה.";
+
+S.push({ t: "section", sec: "p4", no: "הרחבה", n: "+", title: "MCP ו-Skills, מההתחלה", sub: "שתי דרכים להפוך את Claude מ'עוזר שמדברים איתו' לעוזר שעובד איתנו באמת: שיכול להגיע למערכות שלנו, ושמכיר את הנהלים שלנו.", meta: ["מה זה", "למה צריך", "איך מוסיפים, צעד אחרי צעד"],
+  note: "מתחילות מאפס. לא צריך לזכור שום מונח מראש. המבנה: קודם הבעיה, אחר כך הפתרון עם משל, אחר כך דוגמה, ורק בסוף איך עושים את זה בפועל." });
+
+S.push({ t: "statement", sec: "p4", big: "Claude חכם מאוד.<br><em>אבל הוא סגור בחדר.</em>", small: "הוא לא רואה את הקבצים שלך, את GitHub או את בסיס הנתונים, ולא יודע איך הצוות שלך עובד. הוא יודע רק מה שלמד באימון ומה שכתבת לו עכשיו בשיחה.",
+  note: "לשאול את הכיתה: 'אם אבקש מ-Claude עכשיו: כמה סטודנטיות נרשמו השבוע לקורס, מה הוא יענה?' התשובה: הוא לא יודע, כי אין לו גישה למערכת. זו נקודת הפתיחה." });
+
+S.push({ t: "twobox", sec: "p4", kicker: "למה צריך את זה", title: "שתי בעיות, ושני פתרונות",
+  boxes: [
+    { tone: "good", h: "בעיה 1: אין לו גישה למערכות", html: '<p class="say">את: "כמה תקלות פתוחות יש לנו ב-GitHub?"<br>Claude: "אין לי גישה ל-GitHub שלך."</p>', cap: "<b>הפתרון: MCP.</b> מחברים את Claude למערכת, והוא יכול לקרוא ממנה ולפעול בה בעצמו." },
+    { tone: "", h: "בעיה 2: הוא לא מכיר את הנהלים שלנו", html: '<p class="say">בכל שיחה מדביקות מחדש: "תבדוק שאין סיסמאות בקוד, שיש בדיקות, ותחזיר טבלה..."</p>', cap: "<b>הפתרון: Skill.</b> כותבים את הנוהל פעם אחת בקובץ, ו-Claude משתמש בו לבד כשצריך." } ],
+  note: "זה השקף הכי חשוב בפרק. שווה לכתוב על הלוח: MCP = גישה. Skill = נוהל. כל מה שבא אחרי זה הוא פירוט של שני המשפטים האלה." });
+
+/* ---------- MCP ---------- */
+S.push({ t: "flow", sec: "p4", kicker: "MCP · המשל", title: "MCP עובד כמו מלצר במסעדה",
+  lead: "את לא נכנסת למטבח. את אומרת למלצר מה את רוצה, הוא מעביר למטבח, והמנה מגיעה אלייך. MCP הוא הדרך שבה המלצר (Claude) מדבר עם המטבח (המערכת).",
+  nodes: [
+    { k: "human", who: "את · הלקוחה", h: "מבקשת", p: "'כמה תקלות פתוחות יש לנו?'" },
+    { k: "ai", who: "Claude · המלצר", h: "בוחר מהתפריט", p: "רואה את רשימת הפעולות האפשריות ובוחר: 'חיפוש תקלות'" },
+    { k: "code", who: "שרת MCP · המטבח", h: "מבצע בפועל", p: "נכנס ל-GitHub ומביא את התקלות" },
+    { k: "dec", who: "התוצאה", h: "חוזרת אלייך", p: "Claude מסדר את המידע ועונה בשפה פשוטה" } ],
+  legend: false,
+  note: "MCP הוא ראשי תיבות של Model Context Protocol, כלומר 'שפה מוסכמת' בין מודל למערכות. היופי: זו שפה אחת לכולם. GitHub כותבת 'מטבח' אחד, וכל מלצר שמדבר את השפה (Claude, ChatGPT, Cursor, VS Code) יכול לעבוד מולו." });
+
+S.push({ t: "chat", sec: "p4", kicker: "MCP · דוגמה", title: "ככה זה נראה בשיחה אמיתית",
+  msgs: [
+    { who: "me", text: "כמה תקלות פתוחות יש בפרויקט שלנו ב-GitHub, ומה הכי דחוף?" },
+    { who: "ai", text: '<span class="toolcall">⚙ רוצה להפעיל: GitHub › list_issues</span>לאשר?' },
+    { who: "me", text: "מאשרת." },
+    { who: "ai", text: "יש 7 תקלות פתוחות. הכי דחופה: #42 'התשלום נכשל בקופה', פתוחה כבר 3 ימים." } ],
+  side: [
+    { c: "var(--accent)", h: "Claude בחר לבד", p: "לא אמרת לו באיזה כלי להשתמש." },
+    { c: "var(--accent-2)", h: "הוא ביקש אישור", p: "לפני כל פעולה במערכת. את מחליטה." },
+    { c: "var(--good)", h: "מידע אמיתי", p: "התשובה מגיעה מ-GitHub, לא מניחוש." } ],
+  note: "להדגיש: בלי MCP הייתן צריכות להיכנס ל-GitHub, להעתיק את רשימת התקלות ולהדביק בשיחה. עם MCP הוא מביא את זה בעצמו. ובכל זאת, את מאשרת כל פעולה, בדיוק כמו ברמזור ממפגש 3." });
+
+S.push({ t: "cards", sec: "p4", kicker: "MCP · מילים", title: "שלוש מילים, וזה הכול", cols: 3,
+  cards: [
+    { i: "gear", tag: "MCP Server", h: "שרת MCP = המטבח", p: "התוכנה שמחברת מערכת אחת ל-Claude. בדרך כלל החברה שמאחורי המערכת כבר כתבה אותה, ורק צריך לחבר." },
+    { i: "list", tag: "Tool", h: "כלי = מנה בתפריט", p: "פעולה אחת שהשרת יודע לעשות, כמו 'חפש תקלות' או 'צור קובץ'. Claude רואה את רשימת הכלים ובוחר." },
+    { i: "link", tag: "Connector", h: "מחבר = אותו דבר, ב-Claude.ai", p: "באתר של Claude קוראים לשרת MCP שחיברת 'Connector'. זה לא דבר חדש, רק שם אחר." } ],
+  note: "אם תלמידה זוכרת רק את שלוש המילים האלה, היא מבינה את MCP. בשקפים הבאים: איך מחברים בפועל, קודם באתר Claude.ai ואחר כך בטרמינל." });
+
+S.push({ t: "twobox", sec: "p4", kicker: "MCP · שרת פרטי", title: "ומה אם המערכת שלי חדשה ואף אחד לא מכיר אותה?",
+  boxes: [
+    { tone: "", h: "דמייני: מכונת קפה חכמה", html: '<p class="say">דמייני שאת מייצרת מכשיר חדש לגמרי (נניח, מכונת קפה חכמה עם פיצ\'ר ייחודי). את מחברת אליה שקע USB-C סטנדרטי. העובדה שהמכונה שלך חדשה והעולם עוד לא מכיר אותה לא משנה את העובדה שהיא משתמשת בחיבור סטנדרטי – כל מטען USB-C יתחבר פיזית לשקע. מיד כשהמחשב או האפליקציה ידברו איתה דרך החיבור הזה, הם יבינו את הפקודות שלה.</p>', cap: "השקע סטנדרטי, המכונה ייחודית." },
+    { tone: "good", h: "כך בדיוק עובד שרת MCP פרטי", html: '<p class="say">הפרוטוקול תקני ומוכר ל-AI, אבל התוכן שאת מחברת אליו הוא הייחודי שלך.</p>', cap: "למשל: שרת MCP שהמכללה בונה למערכת הציונים שלה. אף כלי AI לא מכיר את המערכת, אבל כולם יודעים לדבר עם השרת, כי הוא משתמש בשפה הסטנדרטית." } ],
+  note: "השקף הזה עונה על השאלה שתלמידות שואלות כמעט תמיד: 'אבל איך Claude יכיר מערכת שבנינו בעצמנו?' התשובה: הוא לא צריך להכיר אותה מראש. מספיק שהשרת מדבר בשפה הסטנדרטית (MCP), ו-Claude יקרא ממנו את רשימת הכלים ויבין מה אפשר לעשות. זה גם מסביר את השקפים הבאים: כתובת של שרת כזה מכניסים ב-Add custom connector." });
+
+S.push({ t: "shot", sec: "p4", kicker: "מחברים ב-Claude.ai · שלב 1 מתוך 3", title: "נכנסות למסך המחברים",
+  steps: [
+    { h: `נכנסות ל-${LT("Customize › Connectors")}`, p: "מהתפריט בצד של Claude.ai." },
+    { h: "לוחצות + Add", p: "הכפתור למעלה." },
+    { h: "בוחרות איזה סוג", p: "שירות מוכר (GitHub, Google Drive): Browse connectors, מחפשות ולוחצות Connect.<br>יש לך כתובת של שרת: Add custom connector." } ],
+  screen: WIN("claude.ai/customize/connectors", `<div class="mrow">${SIDE("Connectors", true)}<div class="mmain">
+      <div class="mtop"><span class="mt">Connectors</span><span class="btn dark hi">+ Add ${MK(2)}</span></div>
+      <div class="menu" style="right:26px;top:84px"><div class="it hi">Browse connectors ${MK(3)}</div><div class="it hi">Add custom connector ${MK(3)}</div></div>
+      <div class="list"><div class="li"><span class="lg">GH</span><span>GitHub</span><span class="sts ok">Connected</span></div><div class="li"><span class="lg">GD</span><span>Google Drive</span><span class="sts ok">Connected</span></div><div class="li"><span class="lg">CL</span><span>Calendar</span><span class="sts">Connect</span></div></div>
+    </div></div>`),
+  cap: CAP_UI,
+  note: "הדרך הקלה: Browse connectors, ובוחרים שירות מוכר מהרשימה. Add custom connector רק כשיש כתובת של שרת שמישהו נתן לך, למשל שרת שהמכללה בנתה. בתוכנית החינמית אפשר להוסיף מחבר מותאם אחד. בארגון (Team) רק המנהלת מוסיפה, וכל אחת לוחצת Connect." });
+
+S.push({ t: "shot", sec: "p4", kicker: "מחברים ב-Claude.ai · שלב 2 מתוך 3", title: "ממלאות שני שדות ובוחרות התחברות",
+  steps: [
+    { n: 4, h: "Name", p: "כל שם שתבחרי, למשל Course DB." },
+    { n: 5, h: "URL ← Continue", p: "הכתובת של השרת, כפי שקיבלת אותה מהספק." },
+    { n: 6, h: "התחברות", p: "צריך משתמש וסיסמה בשירות? Sign in now. לא צריך? No sign in." },
+    { n: 7, h: "Add", p: "סיימת. המחבר מופיע ברשימה." } ],
+  screen: WIN("claude.ai/customize/connectors", `<div class="dim"><div class="dlg">
+        <div class="dh">Add custom connector</div>
+        <label>Name ${MK(4)}</label><div class="inp">Course DB</div>
+        <label>Remote MCP server URL ${MK(5)}</label><div class="inp">https://mcp.my-college.dev/mcp</div>
+        <div class="dact"><span class="btn">Cancel</span><span class="btn dark">Continue</span></div></div>
+      <div class="dlg">
+        <div class="dh">Authentication ${MK(6)}</div>
+        <div class="rad sel">◉ Sign in now</div><div class="rad">○ Sign in when needed</div><div class="rad">○ No sign in</div>
+        <div class="dact"><span class="btn">Back</span><span class="btn dark hi">Add ${MK(7)}</span></div></div></div>`),
+  cap: CAP_UI,
+  note: "שני חלונות ברצף. בחלון השני יש עוד שדות מתקדמים (OAuth client, Request headers): משאירים את ברירת המחדל אלא אם הספק של השרת ביקש אחרת. Sign in now פותח חלון התחברות לשירות, כמו 'התחברי עם Google'." });
+
+S.push({ t: "shot", sec: "p4", kicker: "מחברים ב-Claude.ai · שלב 3 מתוך 3", title: "מדליקות את המחבר בשיחה, ושואלות",
+  steps: [
+    { h: "לוחצות + בתיבת ההודעה", p: "בפינה השמאלית התחתונה." },
+    { h: "Connectors", p: "נפתחת רשימת המחברים שלך." },
+    { h: "מדליקות את המתג", p: "רק למחבר שצריך עכשיו." },
+    { h: "שואלות רגיל", p: "בעברית פשוטה, ומאשרות כש-Claude מבקש." } ],
+  screen: WIN("claude.ai/new", `<div class="chatm"><div class="greet">How can I help you today?</div>
+      <div class="menu up" style="left:34px;bottom:150px"><div class="it">Add files or photos</div><div class="it hi">Connectors › ${MK(2)}</div></div>
+      <div class="menu up" style="left:350px;bottom:150px;width:300px"><div class="it">Course DB ${TOG(true)} ${MK(3)}</div><div class="it">GitHub ${TOG(false)}</div><div class="it">Google Drive ${TOG(false)}</div></div>
+      <div class="comp"><div class="ph">כמה סטודנטיות נרשמו השבוע לקורס? ${MK(4)}</div><div class="crow"><span class="plus hi">+</span>${MK(1)}<span style="flex:1"></span><span class="send">↑</span></div></div></div>`),
+  cap: CAP_UI,
+  note: "למה להדליק רק מה שצריך? כל מחבר דלוק מוסיף ל-Claude 'תפריט' של כלים, וזה תופס מקום בזיכרון של השיחה (Context Window מהמילון). פחות מחברים דלוקים = תשובות מדויקות יותר." });
+
+S.push({ t: "table", sec: "p4", kicker: "מחברים ב-Claude Code · בטרמינל", title: "פקודה אחת. מפרקות אותה לחלקים",
+  lead: `הפקודה המלאה: ${LT("claude mcp add --transport http notion https://mcp.notion.com/mcp")}`,
+  head: ["החלק בפקודה", "מה הוא אומר"],
+  rows: [
+    [LT("claude mcp add"), "Claude Code, תוסיף שרת MCP"],
+    [LT("--transport http"), "השרת נמצא באינטרנט (ולא על המחשב שלי)"],
+    [LT("notion"), "השם שאני בוחרת לשרת"],
+    [LT("https://mcp.notion.com/mcp"), "הכתובת של השרת (כאן: השרת הרשמי של Notion)"] ],
+  note: "אותו דבר כמו בשקפים של Claude.ai: שם וכתובת. רק שכאן כותבים בטרמינל במקום למלא טופס. לקרוא את הפקודה עם הכיתה מילה אחרי מילה." });
+
+S.push({ t: "shot", sec: "p4", kicker: "מחברים ב-Claude Code · בטרמינל", title: "מריצות, מתחברות, ושואלות",
+  steps: [
+    { h: "מריצות את הפקודה", p: "בתיקיית הפרויקט." },
+    { h: "Added ... ✓", p: "זה סימן שהשרת נשמר." },
+    { h: "פותחות את Claude Code", p: "כותבות claude בטרמינל." },
+    { h: "‎/mcp", p: "בוחרות את notion ומתחברות בדפדפן. מעכשיו אפשר לשאול עליו." } ],
+  screen: TERM("Terminal — my-project", `${P$("claude mcp add --transport http notion https://mcp.notion.com/mcp")} <b class="mk">1</b>
+<span class="ok">Added HTTP MCP server notion with URL: https://mcp.notion.com/mcp to local config</span> <b class="mk">2</b>
+<span class="dimt">File modified: /work/home/.claude.json [project: /work/my-project]</span>
+
+${P$("claude")} <b class="mk">3</b>
+<span class="cc">╭───────────────────────────────────────────╮
+│ ✻ Claude Code                             │
+╰───────────────────────────────────────────╯</span>
+<span class="pr">&gt;</span> <span class="cmd">/mcp</span> <b class="mk">4</b>
+<span class="pr">&gt;</span> <span class="cmd heb">תסכמי לי את דף הפרויקט שלנו ב-Notion</span>`),
+  cap: "שלוש השורות הראשונות הן פלט אמיתי מ-Claude Code 2.1.304. החלק שאחרי claude מראה מה מקלידים בתוך התוכנה.",
+  note: "להדגים מול הכיתה. אם רוצים שכל הצוות יקבל את אותו שרת, מוסיפים ‎--scope project, וההגדרה נשמרת בקובץ ‎.mcp.json בפרויקט. אחרי זה עושים לו commit, וכל מי שמושכת את הפרויקט מקבלת אותו (Claude Code ישאל אותה פעם אחת אם לאשר)." });
+
+S.push({ t: "promptbox", sec: "p4", ltr: true, kicker: "MCP · דוגמה משלי", title: "בונות שרת MCP משלנו: ספריית המכללה", small: true,
+  code: String.raw`from mcp.server import MCPServer
+mcp = MCPServer("college-library")
+
+BOOKS = {  # in a real project: the library database
+    1: {"title": "Python Crash Course", "copies": 2},
+    2: {"title": "Clean Code", "copies": 0},
+}
+
+@mcp.tool()
+def search_books(query: str) -> dict:
+    """Search the college library by book title."""
+    return {i: b for i, b in BOOKS.items() if query.lower() in b["title"].lower()}
+
+@mcp.tool()
+def is_available(book_id: int) -> str:
+    """Check if a book has a free copy to borrow."""
+    copies = BOOKS[book_id]["copies"]
+    return f"{copies} copies available" if copies else "All copies are taken"
+
+mcp.run()  # Claude runs this file and talks to it`,
+  side: [
+    { c: "var(--accent)", h: "1 · יוצרות שרת", p: "pip install mcp, ושורה אחת עם שם." },
+    { c: "var(--accent-2)", h: "2 · ‎@mcp.tool()‎", p: "הופך פונקציה רגילה לכלי של Claude." },
+    { c: "var(--good)", h: "3 · התיאור", p: "לפיו Claude מחליט מתי להפעיל את הכלי." },
+    { c: "#c8b1ff", h: "4 · BOOKS", p: "בפרויקט אמיתי: בסיס הנתונים." } ],
+  note: "זו דוגמה ל'מכונת הקפה' מהשקף הקודם: אף כלי AI לא מכיר את מערכת הספרייה שלנו, אבל השרת מדבר MCP ולכן Claude יודע לעבוד איתו. הקוד אמיתי ונבדק (ספריית mcp גרסה 2.2, מתקינים עם pip install mcp). שימו לב: אין פה שום דבר מסובך. שתי פונקציות Python רגילות, ומעל כל אחת שורה אחת ‎@mcp.tool()‎. בגרסאות ישנות של הספרייה קוראים לזה FastMCP במקום MCPServer." });
+
+S.push({ t: "shot", sec: "p4", kicker: "MCP · דוגמה משלי", title: "מחברות את השרת, ושואלות עליו",
+  steps: [
+    { h: "פקודה אחת", p: "library הוא השם. אחרי -- כותבים איך מריצים את הקובץ." },
+    { h: "√ Connected", p: "השרת עובד ו-Claude רואה את שני הכלים." },
+    { h: "שואלות בעברית רגילה", p: "בלי להזכיר את השרת או את שמות הכלים." },
+    { h: "Claude בוחר כלים לבד", p: "קודם search_books, ואז is_available, ועונה." } ],
+  screen: TERM("Terminal — my-project", `${P$("claude mcp add library -- python3 library_server.py")} <b class="mk">1</b>
+<span class="ok">Added stdio MCP server library with command: python3 library_server.py to local config</span>
+
+${P$("claude mcp list")}
+Checking MCP server health…
+
+library: python3 library_server.py - <span class="pr">√ Connected</span> <b class="mk">2</b>
+
+${P$("claude")}
+<span class="pr">&gt;</span> <span class="cmd heb">יש בספרייה את הספר Clean Code? אפשר לשאול אותו?</span> <b class="mk">3</b>
+
+<span class="cc">⏺ library › search_books</span>(query: "Clean Code") <b class="mk">4</b>
+  <span class="dimt">⎿ {"2": {"title": "Clean Code", "copies": 0}}</span>
+<span class="cc">⏺ library › is_available</span>(book_id: 2)
+  <span class="dimt">⎿ All copies are taken</span>
+
+<span class="heb ok">הספר Clean Code נמצא בספרייה, אבל כל העותקים מושאלים כרגע.</span>`),
+  cap: "הפקודות ותוצאות הכלים אמיתיות (הורצו מול השרת מהשקף הקודם). התצוגה של השיחה בתוך Claude Code מוצגת להמחשה.",
+  note: "להדגים בכיתה מהתחלה ועד הסוף: שומרות את הקובץ, מריצות את הפקודה, רואות Connected, ושואלות. הרגע ה'וואו' לכיתה: לא אמרנו ל-Claude באיזה כלי להשתמש. הוא קרא את התיאורים של שני הכלים והחליט לבד. רעיון להרחבה: להוסיף כלי שלישי, reserve_book, ולשאול את הכיתה באיזה צבע של הרמזור הוא (צהוב, כי הוא משנה נתונים)." });
+
+S.push({ t: "cards", sec: "p4", kicker: "MCP · זהירות", title: "לחבר שרת MCP = לתת מפתח", cols: 3, compact: true,
+  lead: "כש-Claude עושה פעולה דרך שרת MCP, הוא עושה אותה <b>עם המשתמש שלך</b>. מבחינת GitHub, את מחקת, את שלחת, את שינית. לכן שואלות שלוש שאלות, כמו לפני שנותנים למישהו מפתח לבית:",
+  cards: [
+    { i: "shield", tag: "שאלה 1", h: "למי אני נותנת?", p: "רק לשרת ממקור מוכר. כמו אפליקציה: מורידים מהחנות הרשמית, לא מקישור שמישהו שלח.<br><br><span style='color:var(--good)'>✓ השרת הרשמי של GitHub</span><br><span style='color:var(--bad)'>✕ שרת מאתר שלא מכירים</span>" },
+    { i: "eye", tag: "שאלה 2", h: "מה הוא עומד לעשות?", p: "לפני כל פעולה Claude מראה מה הוא רוצה לעשות ומחכה ל'אשר'. קוראות לפני שלוחצות.<br><br><span style='color:var(--good)'>✓ 'חפש תקלות': אפשר לאשר</span><br><span style='color:var(--accent-2)'>⚠ 'מחק קובץ': עוצרות וקוראות</span>" },
+    { i: "lock", tag: "שאלה 3", h: "לאיזה חדר?", p: "רק למה שצריך. כמו לתת לשכנה מפתח לתיבת הדואר, ולא לכל הבית.<br><br>צריך רק לקרוא נתונים? נותנים <b>הרשאת קריאה בלבד</b>. גם אם Claude יטעה, הוא לא יוכל למחוק כלום." } ],
+  note: "להסביר עם המפתח: אף אחת לא נותנת מפתח לבית לאדם זר (שאלה 1). גם כשנותנים לשכנה, רוצים לדעת מה היא עושה בבית (שאלה 2). ונותנים מפתח רק לחדר שהיא צריכה (שאלה 3). בהקשר של המכללה: אם בונות שרת MCP לבסיס הנתונים של הציונים, ו-Claude צריך רק להציג ציונים, המשתמש שלו בבסיס הנתונים יהיה עם הרשאת קריאה בלבד. כך גם טעות לא תמחק ציון. לחבר לרמזור ממפגש 3: קריאה = ירוק, שינוי = צהוב, מחיקה או שליחה החוצה = אדום." });
+
+/* ---------- Skills ---------- */
+S.push({ t: "compare", sec: "p4", kicker: "Skills · למה צריך", title: "Skill = נוהל שכותבים פעם אחת",
+  lead: "כמו מתכון שמור: לא מסבירים כל פעם מחדש איך מכינים את העוגה. כותבים פעם אחת, ופותחים כשצריך.",
+  left: { tone: "bad", h: "בלי Skill", items: ["בכל שיחה מדביקות מחדש את אותן הוראות", "שוכחות כלל אחד, והתוצאה יוצאת אחרת", "כל אחת בצוות מסבירה ל-Claude בדרך שלה"] },
+  right: { tone: "good", h: "עם Skill", items: ["כותבות את הנוהל פעם אחת, בקובץ", "Claude מזהה לבד מתי הוא צריך אותו", "כל הצוות מקבל את אותה תוצאה"] },
+  note: "סימן שצריך Skill: הדבקת את אותן הוראות שלוש פעמים. דוגמאות: סקירת קוד לפי כללי הצוות, כתיבת דוח שבועי בפורמט קבוע, הסבר שגיאות לתלמידות." });
+
+S.push({ t: "promptbox", sec: "p4", ltr: true, kicker: "Skills · מה יש בפנים", title: "Skill הוא תיקייה עם קובץ טקסט אחד",
+  code: String.raw`code-review/          # התיקייה
+└── SKILL.md          # הקובץ היחיד שחובה
+
+---
+name: code-review
+description: סקירת קוד לפי כללי הצוות. להפעיל כשמבקשים
+  לבדוק קוד או לפני commit.
+---
+
+כשאת סוקרת קוד, בדקי:
+1. אין סיסמאות או מפתחות בתוך הקוד.
+2. כל פונקציה מטפלת בשגיאות.
+3. לכל פונקציה חדשה יש בדיקה.
+החזירי טבלה: קובץ | בעיה | תיקון מוצע.`,
+  side: [
+    { c: "var(--accent)", h: "1 · name", p: "שם קצר באנגלית, עם מקפים. כמו שם התיקייה." },
+    { c: "var(--accent-2)", h: "2 · description", p: "הכי חשוב: מה הוא עושה ומתי להפעיל אותו. לפי זה Claude מחליט." },
+    { c: "var(--good)", h: "3 · ההוראות", p: "פרומפט רגיל, כמו שלמדנו במפגש 2." } ],
+  note: "להראות שאין פה שום דבר חדש: החלק התחתון הוא פרומפט טוב ממפגש 2. ההבדל היחיד: שתי השורות למעלה (name ו-description) שאומרות ל-Claude איך קוראים לנוהל ומתי להשתמש בו." });
+
+S.push({ t: "flow", sec: "p4", kicker: "Skills · איך Claude יודע", title: "איך Claude יודע מתי להשתמש ב-Skill?",
+  lead: "כמו בספרייה: על המדף רואים רק את שמות הספרים, ופותחים רק את הספר שצריך. כך אפשר להחזיק הרבה Skills בלי להעמיס.",
+  nodes: [
+    { k: "human", who: "1", h: "את מבקשת", p: "'תבדקי לי את הקוד לפני commit'" },
+    { k: "ai", who: "2", h: "Claude קורא רק תיאורים", p: "עובר על ה-description של כל ה-Skills" },
+    { k: "dec", who: "3", h: "מוצא התאמה", p: "'code-review מתאים לבקשה'" },
+    { k: "code", who: "4", h: "פותח ועובד לפיו", p: "קורא את ההוראות המלאות ועונה לפי הנוהל" } ],
+  legend: false,
+  note: "מכאן ברור למה ה-description הכי חשוב: אם הוא לא ברור, Claude לא יידע מתי לפתוח את ה-Skill. אפשר גם להפעיל Skill ידנית: ב-Claude Code מקלידים / ואת שם ה-Skill." });
+
+S.push({ t: "shot", sec: "p4", kicker: "Skills ב-Claude.ai · שלב 1 מתוך 2", title: "מוודאות ש-Skills פועלים",
+  steps: [
+    { h: LT("Settings › Capabilities"), p: "מדליקות את Code execution and file creation. בלי זה Skills לא עובדים." },
+    { h: LT("Customize › Skills"), p: "מדליקות במתג את ה-Skills שרוצים." } ],
+  screen: WIN("claude.ai/settings/capabilities", `<div class="two">
+      <div class="pane"><div class="crumb">Settings › Capabilities</div><div class="mt">Capabilities</div>
+        <div class="li big"><div><b>Code execution and file creation</b><br><small>Claude can write and run code, and create and edit files.</small></div>${TOG(true)}${MK(1)}</div></div>
+      <div class="pane"><div class="crumb">Customize › Skills</div><div class="mt">Skills</div>
+        <div class="li"><span class="lg">S</span><span>pdf</span>${TOG(true)}</div>
+        <div class="li"><span class="lg">S</span><span>xlsx</span>${TOG(true)}</div>
+        <div class="li hi"><span class="lg">S</span><span>code-review <small class="tagc">Custom</small></span>${TOG(true)}${MK(2)}</div></div></div>`),
+  cap: CAP_UI,
+  note: "Skills זמינים בכל התוכניות, גם בחינמית. בארגון (Team/Enterprise) המנהלת צריכה לאפשר אותם, וב-Team זה דלוק מראש." });
+
+S.push({ t: "shot", sec: "p4", kicker: "Skills ב-Claude.ai · שלב 2 מתוך 2", title: "מעלות Skill משלנו",
+  steps: [
+    { h: "דוחסות את התיקייה ל-ZIP", p: "קליק ימני על התיקייה code-review ← דחיסה. דוחסות את התיקייה, לא את הקובץ." },
+    { h: "לוחצות +", p: `בעמוד ${LT("Customize › Skills")}.` },
+    { h: LT("Create skill › Upload a skill"), p: "ובוחרות את קובץ ה-ZIP." },
+    { h: "מדליקות את המתג", p: "ה-Skill מופיע ברשימה ומוכן." } ],
+  screen: WIN("claude.ai/customize/skills", `<div class="mrow">${SIDE("Skills", false)}<div class="mmain">
+      <div class="mtop"><span class="mt">Skills</span><span class="btn dark hi">+ ${MK(2)}</span></div>
+      <div class="menu" style="right:26px;top:84px;width:240px"><div class="it hi">+ Create skill ${MK(3)}</div></div>
+      <div class="menu" style="right:282px;top:84px;width:240px"><div class="it hi">Upload a skill ${MK(3)}</div></div>
+      <div class="drop">${MK(1)}<b>code-review.zip</b><small>code-review/<br>└── SKILL.md</small></div>
+      <div class="li hi" style="margin-top:18px"><span class="lg">S</span><span>code-review <small class="tagc">Custom</small></span>${TOG(true)}${MK(4)}</div>
+    </div></div>`),
+  cap: CAP_UI,
+  note: "הטעות הנפוצה ביותר: דוחסים את הקובץ SKILL.md לבד, ולא את התיקייה. בתוך ה-ZIP צריכה להיות התיקייה code-review, ובתוכה הקובץ. טעויות נוספות: שם התיקייה שונה מה-name, או description ארוך מ-200 תווים." });
+
+S.push({ t: "shot", sec: "p4", kicker: "Skills ב-Claude Code · שלב 1 מתוך 2", title: "יוצרות את ה-Skill: תיקייה וקובץ אחד",
+  steps: [
+    { h: "פותחות את הפרויקט", p: "בעורך הקוד הרגיל, למשל VS Code." },
+    { h: "יוצרות שלוש תיקיות, אחת בתוך השנייה", p: `${LT(".claude › skills › code-review")}<br>התיקייה האחרונה היא השם של ה-Skill.` },
+    { h: "בתוכה יוצרות קובץ SKILL.md", p: "ומעתיקות אליו את הטקסט מהשקף 'Skill הוא תיקייה עם קובץ טקסט אחד'." },
+    { h: "שומרות. זהו.", p: "אין ZIP ואין העלאה. Claude Code מוצא את התיקייה לבד." } ],
+  screen: `<div class="win ide"><div class="bar"><span class="dots"><i></i><i></i><i></i></span><span class="url">VS Code — my-project</span></div><div class="body"><div class="idew">
+      <div class="exp"><div class="eh">EXPLORER</div>
+        <div class="f d">▾ my-project</div>
+        <div class="f d l1 hi2">▾ .claude ${MK(2)}</div>
+        <div class="f d l2 hi2">▾ skills</div>
+        <div class="f d l3 hi2">▾ code-review</div>
+        <div class="f l4 act">SKILL.md ${MK(3)}</div>
+        <div class="f d l1">▾ src</div>
+        <div class="f l2">payment.py</div>
+        <div class="f l1">library_server.py</div></div>
+      <div class="ed"><div class="tab">SKILL.md ${MK(4)}</div><pre>---
+name: code-review
+description: <span class="heb">סקירת קוד לפי כללי הצוות. להפעיל כשמבקשים לבדוק קוד או לפני commit.</span>
+---
+
+<span class="heb">כשאת סוקרת קוד, בדקי:</span>
+<span class="heb">1. אין סיסמאות או מפתחות בתוך הקוד.</span>
+<span class="heb">2. כל פונקציה מטפלת בשגיאות.</span>
+<span class="heb">3. לכל פונקציה חדשה יש בדיקה.</span>
+<span class="heb">החזירי טבלה: קובץ | בעיה | תיקון מוצע.</span></pre></div></div></div></div>`,
+  cap: "איור להמחשה של מבנה התיקיות. הקבצים עצמם נוצרו ונבדקו בפרויקט הדגמה.",
+  note: "להסביר לאט: ‎.claude היא תיקייה מיוחדת ש-Claude Code מחפש בכל פרויקט (הנקודה בהתחלה אומרת שזו תיקיית הגדרות, כמו ‎.git). בתוכה skills: כאן שמים את כל ה-Skills. ובתוכה תיקייה לכל Skill, עם הקובץ SKILL.md. אפשר ליצור את זה גם בטרמינל: mkdir -p .claude/skills/code-review. אם רוצים Skill שיעבוד בכל הפרויקטים, שמים אותו ב-‎~/.claude/skills במקום בתוך הפרויקט." });
+
+S.push({ t: "shot", sec: "p4", kicker: "Skills ב-Claude Code · שלב 2 מתוך 2", title: "משתמשות בו: Claude סוקר קוד לפי הכללים שלנו",
+  steps: [
+    { h: "יש לנו קובץ עם בעיות", p: "מפתח API כתוב בקוד, ואין טיפול בשגיאות." },
+    { h: "מבקשות במילים רגילות", p: "לא מזכירות את ה-Skill בכלל." },
+    { h: "Claude מוצא את ה-Skill לבד", p: "הבקשה מתאימה ל-description: 'לבדוק קוד'." },
+    { h: "התשובה לפי הנוהל שלנו", p: "בדק בדיוק את 3 הכללים, והחזיר טבלה בפורמט שכתבנו." } ],
+  screen: TERM("Terminal — my-project", `${P$("cat src/payment.py")} <b class="mk">1</b>
+import requests
+
+API_KEY = "sk-live-12345"
+
+def charge(amount):
+    r = requests.post("https://pay.example.com", json={"amount": amount},
+                      headers={"key": API_KEY})
+    return r.json()
+${P$("claude")}
+<span class="pr">&gt;</span> <span class="cmd heb">תבדקי את קובץ התשלום לפני שאני שומרת</span> <b class="mk">2</b>
+<span class="cc">⏺ Skill(code-review)</span> <b class="mk">3</b>
+<span class="cc">⏺ Read(src/payment.py)</span>`).replace("</pre>", `</pre><table class="tt"><tr><th>קובץ ${MK(4)}</th><th>בעיה</th><th>תיקון מוצע</th></tr><tr><td>payment.py שורה 3</td><td>מפתח API כתוב בתוך הקוד</td><td>להעביר למשתנה סביבה</td></tr><tr><td>payment.py שורה 6</td><td>אין טיפול בשגיאה אם התשלום נכשל</td><td>להוסיף try/except</td></tr><tr><td>payment.py</td><td>אין בדיקה לפונקציה charge</td><td>להוסיף בדיקה</td></tr></table>`),
+  cap: "הקוד בחלק העליון הוא קובץ אמיתי. החלק שאחרי claude מראה להמחשה איך נראית העבודה עם ה-Skill.",
+  note: "הרגע החשוב: לא כתבנו ל-Claude אף אחד מהכללים. רק ביקשנו 'תבדקי לפני commit'. הוא קרא את ה-description של code-review, הבין שזה מתאים, פתח את ההוראות, ובדק בדיוק את שלושת הכללים שלנו. שימו לב שכל שורה בטבלה מתאימה לכלל אחד מה-Skill. אפשר גם להפעיל ידנית: מקלידים ‎/code-review." });
+
+S.push({ t: "twobox", sec: "p4", kicker: "סיכום", title: "MCP או Skill? שואלות שאלה אחת",
+  boxes: [
+    { tone: "good", h: "Claude צריך להגיע למשהו? ← MCP", html: '<p class="say">"תביא את התקלות מ-GitHub"<br>"מה כתוב בדף ב-Notion?"<br>"כמה נרשמו השבוע?"</p>', cap: "MCP = <b>גישה</b> למערכות ולמידע." },
+    { tone: "", h: "Claude צריך לעבוד בדרך קבועה? ← Skill", html: '<p class="say">"תסקור קוד לפי הכללים שלנו"<br>"תכתוב דוח בפורמט של הצוות"<br>"תסביר שגיאה בלי לתת פתרון"</p>', cap: "Skill = <b>נוהל</b> שכותבים פעם אחת." } ],
+  note: "ואפשר לשלב: Skill של 'דוח שבועי' שמשתמש ב-MCP של GitHub כדי להביא את הנתונים. הנוהל אומר מה לעשות, וה-MCP נותן את הגישה." });
+
+S.push({ t: "exx", sec: "p4", n: "+", title: "תרגול: Skill ראשון משלכן",
+  goal: "בונות Skill שמסביר שגיאות קוד בעברית פשוטה, <b>בלי לתת את הפתרון</b>. כותבות בדף, מעלות ל-Claude, ובודקות שהוא עובד לבד.",
+  steps: [
+    { time: "10 דק׳", where: "בדף", h: "name ו-description", p: "name: explain-error. ב-description: מה הוא עושה ומתי להפעיל אותו." },
+    { time: "10 דק׳", where: "בדף", h: "שלושה כללים", p: "למשל: להסביר מה השגיאה אומרת, לתת רמז אחד, לא לכתוב קוד מתוקן." },
+    { time: "10 דק׳", where: "בכלי AI", h: "דוחסות ומעלות", p: "דוחסות את התיקייה ל-ZIP ומעלות, בדיוק כמו בשלב 2 של Skills ב-Claude.ai." },
+    { time: "10 דק׳", where: "בכלי AI", h: "בודקות", p: "שיחה חדשה ← מדביקות שגיאה אמיתית בלי להזכיר את ה-Skill. הוא נפתח לבד?" } ],
+  deliver: "קובץ SKILL.md, צילום מסך של ה-Skill דלוק, ותשובה אחת שלו לשגיאה אמיתית.",
+  check: ["ה-Skill נפתח בלי שביקשתי", "ההסבר בעברית פשוטה", "יש רמז אחד ולא פתרון", "אין קוד מתוקן בתשובה"],
+  note: "אם ה-Skill לא נפתח לבד, כמעט תמיד הבעיה ב-description: הוא כללי מדי או לא אומר מתי להפעיל. מתקנות, מעלות שוב, ובודקות שוב. זו בדיוק האיטרציה ממפגש 2." });
+
+S.push({ t: "cards", sec: "end", kicker: "סיכום", title: "שלושה דברים לקחת מכאן", cols: 3,
+  cards: [
+    { i: "target", tag: "Session 1", h: "מכירים את הכלים", p: "איך מודל עובד, איך קוראים לו מקוד, ואיזה כלי פיתוח מתאים לאיזו משימה." },
+    { i: "pen", tag: "Session 2", h: "פרומפט הוא מפרט וקוד", p: "הקשר מדויק, פלט מובנה, קבצי הנחיות — ובדיקות לפרומפטים עצמם." },
+    { i: "flow", tag: "Session 3", h: "שלב אחרי שלב", p: "מפרקים משימה גדולה, קודם תוכנית ואז קוד, בודקים כל שלב — ולפי הרמזור מחליטים מתי אדם מאשר." } ],
+  note: "לסכם עם הכיתה: מה הדבר האחד שכל אחת לוקחת ליישום כבר מחר? למשל: לכתוב CLAUDE.md או AGENTS.md לפרויקט שלה." });
+
+S.push({ t: "table", sec: "end", kicker: "מה הלאה", title: "המשך הקורס: מפגשים 4–10",
+  head: ["מפגש", "נושא", "מה נבנה"],
+  rows: [
+    ["4", "בוטים מותאמים אישית", "עוזר ראשון עם System Prompt"],
+    ["5", "ניהול ידע ו-RAG", "Embeddings וחיפוש וקטורי על מסמכים"],
+    ["6", "פרוטוקול MCP וסקילים", "שרת MCP שמחבר את הבוט לכלים"],
+    ["7", "אוטומציה ואינטגרציות", "תהליך רציף בין מערכות"],
+    ["8", "בקרת איכות ואבטחה", "Evals, הגנה מ-Prompt Injection ובקרה"],
+    ["9", "מעבדה מעשית", "פיתוח הפרויקט האישי"],
+    ["10", "פרויקט מסכם", "בוט ארגוני עובד והצגתו"] ],
+  note: "כל מה שלמדנו הוא תשתית: המיפוי בוחר את הפרויקט, הפרומפטים הופכים ל-System Prompt, השרשרת הופכת לסוכן. להזכיר לשמור את התוצרים של שלושת התרגולים." });
+
+S.push({ t: "end", sec: "end", note: "תודה רבה! למפגש הבא להביא: הפרומפט הסופי מתרגול 2 וטבלת התהליך מתרגול 3." });
+
+/* ======================= RENDER ======================= */
+const esc = t => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const KW = /\b(def|return|import|from|class|if|not|else|for|in|async|await|print|True|False|None|flowchart)\b/g;
+function hl(code) {
+  return code.split("\n").map(line => {
+    let q = null, cut = -1;
+    for (let i = 0; i < line.length; i++) { const ch = line[i]; if (q) { if (ch === q) q = null; } else if (ch === '"' || ch === "'") q = ch; else if (ch === "#") { cut = i; break; } }
+    const codePart = cut >= 0 ? line.slice(0, cut) : line, com = cut >= 0 ? line.slice(cut) : "";
+    const strs = []; let c = codePart.replace(/("[^"]*"|'[^']*')/g, m => { strs.push(m); return "\u0000" + (strs.length - 1) + "\u0000"; });
+    c = esc(c).replace(KW, '<span class="k">$1</span>').replace(/&lt;(\/?[a-z]+)([^&]*?)&gt;/g, '<span class="t">&lt;$1$2&gt;</span>');
+    c = c.replace(/\u0000(\d+)\u0000/g, (_, n) => '<span class="s">' + esc(strs[+n]) + '</span>');
+    return c + (com ? '<span class="c">' + esc(com) + '</span>' : "");
+  }).join("\n");
+}
+
+function foot(s, i) {
+  return `<div class="foot"><span class="sec"><span class="dot"></span>${SEC[s.sec] || ""}</span><span>© כל הזכויות שמורות ל־TALYA TOLEDANO</span><span class="num">${String(i + 1).padStart(2, "0")} / ${S.length}</span></div>`;
+}
+const head = s => `<div class="head">${s.kicker ? `<div class="kicker">${s.kicker}</div>` : ""}<h2>${s.title}</h2>${s.lead ? `<p class="lead">${s.lead}</p>` : ""}</div>`;
+const R = {
+  cover: () => `<canvas id="net" aria-hidden="true"></canvas>
+    <div class="eyebrow">מסלול מפתחות · אוטומציה חכמה ופיתוח סוכני AI</div>
+    <h1>AI בסביבת <em>העבודה</em></h1>
+    <p class="sub">מפגשים 1–3: איך מודלים עובדים וכלי הפיתוח המרכזיים, הנדסת פרומפטים למפתחות, וחשיבה ותכנון תהליכי עבודה</p>
+    <div class="row"><span>3 מפגשים</span><span>${L("Python · APIs · Agents")}</span><span>${L("Hands-on")}</span></div>`,
+  section: s => `<div class="bignum">${s.n}</div><div class="no">${s.no}</div><h2>${s.title}</h2><p class="sub">${s.sub}</p><div class="meta">${s.meta.map(m => `<span>${m}</span>`).join("")}</div>`,
+  bullets: s => `${head(s)}<ul class="bul">${s.items.map(x => `<li><span>${x}</span></li>`).join("")}</ul>`,
+  cards: s => `${head(s)}<div class="grid${s.cards.length >= 6 || s.compact ? " compact" : ""}" style="grid-template-columns:repeat(${s.cols},1fr)">${s.cards.map((c, k) => `<div class="card${k % 2 && s.cols === 2 ? "" : ""}"><div class="ic">${ic(c.i)}</div>${c.tag ? `<div class="tag">${c.tag}</div>` : ""}<h3>${c.h}</h3><p>${c.p}</p></div>`).join("")}</div>`,
+  hsteps: s => `${head(s)}<div class="hsteps${s.cols >= 5 ? " c5" : ""}" style="grid-template-columns:repeat(${s.cols},1fr)">${s.steps.map((c, k) => `<div class="hstep"><div class="n">${String(k + 1).padStart(2, "0")}</div><h3>${c.h}</h3><p>${c.p}</p></div>`).join("")}</div>`,
+  tool: s => `<div class="kicker">הכלים המרכזיים · במה הכלי טוב ומתי להשתמש בו</div>
+    <div class="tool" style="--tc:${s.color}">
+      <div class="id"><div class="mono">${s.mono}</div><div class="name">${s.name}</div><div class="by">${s.by}</div><p class="tagline">${s.tagline}</p></div>
+      <div class="cols">
+        <div class="box"><h3>במה הוא מצוין</h3><ul>${s.best.map(x => `<li>${x}</li>`).join("")}</ul></div>
+        <div class="box"><h3>יכולות שכדאי להכיר</h3><ul>${s.use.map(x => `<li>${x}</li>`).join("")}</ul></div>
+        <div class="tip">${s.tip}</div>
+      </div></div>`,
+  table: s => `${head(s)}<table class="tbl"><thead><tr>${s.head.map(h => `<th>${h}</th>`).join("")}</tr></thead><tbody>${s.rows.map(r => `<tr>${r.map((c, k) => `<td>${k === 1 && s.head[1] === "הכלי המומלץ" ? c.split(" · ").map(x => `<span class="pill">${x}</span>`).join("") : c}</td>`).join("")}</tr>`).join("")}</tbody></table>`,
+  compare: s => `${head(s)}<div class="cmp">${[s.left, s.right].map(c => `<div class="col ${c.tone}"><h3>${c.h}</h3><ul>${c.items.map(x => `<li><span>${x}</span></li>`).join("")}</ul></div>`).join("")}</div>`,
+  steps: s => `${head(s)}<div class="steps" style="grid-template-columns:repeat(${s.steps.length > 5 ? 2 : 1},1fr)">${s.steps.map((c, k) => `<div class="step"><div class="n">${k + 1}</div><div><h3>${c.h}</h3><p>${c.p}</p></div></div>`).join("")}</div>`,
+  prompt: s => `${head(s)}<div class="pp"><div class="bad"><div class="lbl">✕ פרומפט חלש</div><div class="code">${s.bad}</div></div><div class="good"><div class="lbl">✓ פרומפט מקצועי</div><div class="code">${s.good}</div></div></div>`,
+  promptbox: s => `${head(s)}<div class="pp" style="grid-template-columns:1.7fr 1fr"><div class="code${s.ltr ? " ltr" : ""}"${s.small ? ' style="font-size:19px;line-height:1.4;padding:18px 26px"' : s.ltr && s.code.split("\n").length > 14 ? ' style="font-size:21px;line-height:1.42;padding:22px 28px"' : ""}>${s.ltr ? hl(s.code) : s.code}</div><div class="side">${s.side.map(c => `<div class="chip"><span class="sw" style="background:${c.c}"></span><span><b>${c.h}</b>${c.p}</span></div>`).join("")}</div></div>`,
+  twobox: s => `${head(s)}<div class="twobox">${s.boxes.map(b => `<div class="tb ${b.tone}"><h3>${b.h}</h3>${b.html}<p class="cap">${b.cap}</p></div>`).join("")}</div>`,
+  chat: s => `${head(s)}<div class="chatwrap"><div class="msgs">${s.msgs.map(m => `<div class="msg ${m.who}"><span class="w">${m.who === "me" ? "את" : "המודל"}</span>${m.text}</div>`).join("")}</div><div class="side">${s.side.map(c => `<div class="chip"><span class="sw" style="background:${c.c}"></span><span><b>${c.h}</b>${c.p}</span></div>`).join("")}</div></div>`,
+  lights: s => `${head(s)}<div class="lights">${s.cols.map(c => `<div class="light" style="--lc:${c.c === "good" ? "var(--good)" : c.c === "bad" ? "var(--bad)" : "var(--accent-2)"}"><div style="display:flex;align-items:center;gap:18px"><div class="lamp"></div><h3>${c.h}</h3></div><div class="role"><span>ה-AI</span><b>${c.ai}</b></div><div class="role"><span>את</span><b>${c.me}</b></div><p class="ex"><b>דוגמה: </b>${c.ex}</p></div>`).join("")}</div>`,
+  q3: s => `${head(s)}<div class="q3"><div class="qq">${s.q}</div>${s.rows.map(r => `<div class="row" style="--lc:${r.c === "good" ? "var(--good)" : r.c === "bad" ? "var(--bad)" : "var(--accent-2)"}"><span class="ans">${r.ans}</span><span class="arr">${ARROW}</span><span class="res"><i></i>${r.res}</span><span class="what">${r.what}</span></div>`).join("")}${s.tip ? `<p class="qtip">${s.tip}</p>` : ""}</div>`,
+  exx: s => `${head({ kicker: "תרגול מעשי " + s.n, title: s.title })}<div class="exx">
+      <div style="display:flex;flex-direction:column;gap:16px;min-width:0"><div class="goal">${s.goal}</div><div>${s.steps.map(x => `<div class="srow"><div style="display:flex;flex-direction:column;gap:8px"><span class="time">${x.time}</span>${x.where ? `<span class="where ${x.where === "בדף" ? "paper" : "aitool"}">${x.where}</span>` : ""}</div><div><h3>${x.h}</h3><p>${x.p}</p></div></div>`).join("")}</div></div>
+      <div style="display:flex;flex-direction:column;gap:20px;min-width:0"><div class="rbox del"><h3>מה מגישים בסוף</h3><p>${s.deliver}</p></div><div class="rbox chk"><h3>איך יודעים שהצלחת</h3><ul>${s.check.map(x => `<li>${x}</li>`).join("")}</ul></div></div></div>`,
+  shot: s => `${head(s)}<div class="shot"><div class="stp">${s.steps.map((c, k) => `<div class="st"><div class="n">${c.n || k + 1}</div><div><h3>${c.h}</h3><p>${c.p}</p></div></div>`).join("")}</div><div class="scr">${s.screen}<p class="cap">${s.cap}</p></div></div>`,
+  statement: s => `<p class="big">${s.big}</p><p class="small">${s.small}</p>`,
+  matrix: s => `${head(s)}<div class="mx">
+      <div class="ax y" style="grid-row:span 2">${s.ax.y}</div>
+      ${s.quads.map(q => `<div class="q ${q.c}"><h3>${q.h}</h3><p>${q.p}</p></div>`).join("")}
+      <div></div><div class="ax" style="grid-column:span 2">${s.ax.x}</div></div>`,
+  flow: s => `${head(s)}<div class="flow">${s.nodes.map((n, k) => `${k ? `<div class="arrow">${ARROW}</div>` : ""}<div class="node ${n.k}"><div class="who">${n.who}</div><h3>${n.h}</h3>${n.p ? `<p>${n.p}</p>` : ""}${n.d ? `<div class="d">${n.d}</div>` : ""}</div>`).join("")}</div>
+     ${s.legend ? `<div class="legend"><span><i style="background:var(--accent)"></i>שלב של AI</span><span><i style="background:var(--accent-2)"></i>שלב של אדם</span><span><i style="background:#c8b1ff"></i>שלב של קוד רגיל</span><span><i style="border:2px dashed var(--good)"></i>החלטה / ניתוב</span><span><i style="background:var(--panel2);border:1px solid var(--line)"></i>קלט / פלט</span></div>` : ""}`,
+  tree: s => `${head(s)}<div style="display:flex;flex-direction:column;gap:26px;align-items:stretch">
+      <div style="align-self:center;font-family:var(--f-display);font-size:44px;padding:22px 48px;border-radius:22px;background:linear-gradient(160deg,rgba(116,169,255,.25),var(--panel));border:1px solid rgba(116,169,255,.5)">${s.root}</div>
+      <div style="height:3px;background:linear-gradient(90deg,transparent,var(--line) 10%,var(--line) 90%,transparent)"></div>
+      <div class="grid" style="grid-template-columns:repeat(${s.branches.length},1fr)">${s.branches.map((b, k) => `<div class="card"><div class="tag" style="color:${k === s.branches.length - 1 ? "var(--accent-2)" : "var(--accent)"}">${String(k + 1).padStart(2, "0")}</div><h3>${b.h}</h3><p>${b.items.join("<br>")}</p></div>`).join("")}</div></div>`,
+  exercise: s => `${head({ kicker: "תרגול מעשי " + s.n, title: s.title })}<div class="ex">
+      <div style="display:flex;flex-direction:column;gap:24px"><div class="goal">${s.goal}</div><ul class="bul" style="font-size:31px;gap:14px">${s.steps.map(x => `<li><span>${x}</span></li>`).join("")}</ul></div>
+      <div class="out"><span class="badge">התוצר</span><h3>מה מגישים בסוף</h3><p>${s.out}</p></div></div>`,
+  end: () => `<p class="big">תודה.<br><em>ועכשיו — לעבודה.</em></p><p class="small">להביא למפגש הבא: טבלת המיפוי, תיקיית prompts, קובץ ההנחיות לפרויקט ותרשים ה-Mermaid.</p><p class="small" style="font-size:30px;color:var(--dim)">© כל הזכויות שמורות ל־TALYA TOLEDANO</p>`,
+};
+const stage = document.getElementById("stage");
+stage.innerHTML = S.map((s, i) => {
+  const cls = s.t === "cover" ? "cover" : s.t === "section" ? "section" : (s.t === "statement" || s.t === "end") ? "statement" + (s.t === "end" ? " end" : "") : "";
+  return `<section class="slide ${cls}" data-i="${i}" aria-label="שקף ${i + 1}">${(R[s.t] || R.bullets)(s)}${s.t === "cover" ? "" : foot(s, i)}</section>`;
+}).join("");
+const slides = [...stage.querySelectorAll(".slide")];
+let cur = 0;
+const notesEl = document.getElementById("notes"), countEl = document.getElementById("count"), progEl = document.querySelector("#prog i");
+function go(i) {
+  cur = Math.max(0, Math.min(slides.length - 1, i));
+  slides.forEach((el, k) => el.classList.toggle("on", k === cur));
+  countEl.textContent = `${cur + 1} / ${slides.length}`;
+  progEl.style.width = `${((cur + 1) / slides.length) * 100}%`;
+  notesEl.innerHTML = `<b>הערות מרצה · שקף ${cur + 1}:</b> ${S[cur].note || "—"}`;
+  try { history.replaceState(null, "", "#s" + (cur + 1)); } catch (e) {}
+  try { localStorage.setItem("deckSlide", String(cur)); } catch (e) {}
+}
+function fit() {
+  const vp = document.getElementById("viewport");
+  const k = Math.min(vp.clientWidth / 1920, vp.clientHeight / 1080);
+  stage.style.transform = `translate(-50%,-50%) scale(${k})`;
+}
+document.getElementById("next").onclick = () => go(cur + 1);
+document.getElementById("prev").onclick = () => go(cur - 1);
+const nb = document.getElementById("notesBtn");
+function toggleNotes() { notesEl.hidden = !notesEl.hidden; nb.setAttribute("aria-pressed", String(!notesEl.hidden)); requestAnimationFrame(fit); }
+nb.onclick = toggleNotes;
+function toggleFs() { const d = document; if (!d.fullscreenElement) { (d.documentElement.requestFullscreen?.() || Promise.reject()).catch(() => {}); } else { d.exitFullscreen?.(); } }
+document.getElementById("fsBtn").onclick = toggleFs;
+document.addEventListener("keydown", e => {
+  if (["ArrowLeft", "PageDown", " ", "Enter"].includes(e.key)) { e.preventDefault(); go(cur + 1); }
+  else if (["ArrowRight", "PageUp", "Backspace"].includes(e.key)) { e.preventDefault(); go(cur - 1); }
+  else if (e.key === "Home") go(0); else if (e.key === "End") go(slides.length - 1);
+  else if (e.key.toLowerCase() === "n") toggleNotes(); else if (e.key.toLowerCase() === "f") toggleFs();
+});
+stage.addEventListener("click", e => { const r = stage.getBoundingClientRect(); (e.clientX < r.left + r.width / 2) ? go(cur + 1) : go(cur - 1); });
+let tx = null;
+stage.addEventListener("touchstart", e => { tx = e.touches[0].clientX; }, { passive: true });
+stage.addEventListener("touchend", e => { if (tx === null) return; const dx = e.changedTouches[0].clientX - tx; if (Math.abs(dx) > 40) go(dx > 0 ? cur + 1 : cur - 1); tx = null; });
+addEventListener("resize", fit);
+let start = 0;
+const m = /^#s(\d+)$/.exec(location.hash);
+if (m) start = +m[1] - 1; else { try { start = +(localStorage.getItem("deckSlide") || 0); } catch (e) {} }
+fit(); go(start || 0);
+
+/* cover: drifting neural network */
+(function () {
+  const cv = document.getElementById("net"); if (!cv) return;
+  const ctx = cv.getContext("2d"); const W = 1920, H = 1080; cv.width = W; cv.height = H;
+  const N = 70, P = [];
+  for (let i = 0; i < N; i++) P.push({ x: Math.random() * W * 0.62, y: Math.random() * H, vx: (Math.random() - .5) * .35, vy: (Math.random() - .5) * .35, p: Math.random() * 6.28 });
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function draw(t) {
+    ctx.clearRect(0, 0, W, H);
+    for (const a of P) { if (!still) { a.x += a.vx; a.y += a.vy; } if (a.x < 0 || a.x > W * 0.65) a.vx *= -1; if (a.y < 0 || a.y > H) a.vy *= -1; }
+    for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++) {
+      const a = P[i], b = P[j], d = Math.hypot(a.x - b.x, a.y - b.y);
+      if (d < 210) { ctx.strokeStyle = `rgba(116,169,255,${(1 - d / 210) * .35})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); }
+    }
+    for (const a of P) { const pu = .5 + .5 * Math.sin(t / 700 + a.p); ctx.fillStyle = `rgba(184,210,255,${.35 + .5 * pu})`; ctx.beginPath(); ctx.arc(a.x, a.y, 2 + 2 * pu, 0, 6.28); ctx.fill(); }
+    if (!still) requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+</script>
