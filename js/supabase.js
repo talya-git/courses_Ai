@@ -1,6 +1,6 @@
 import { config } from '../config.js'
 
-const SUPABASE_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm'
+const SUPABASE_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/+esm'
 
 export const demo = !!config.demo
 export const configured = demo || !!(config.supabaseUrl && config.supabaseAnonKey)

@@ -4,8 +4,8 @@ export const config = {
   siteName: 'הקורסים שלי',
 
   // מ-Supabase: Project Settings › API
-  supabaseUrl: '',      // למשל: https://abcdefgh.supabase.co
-  supabaseAnonKey: '',  // המפתח שנקרא anon / public
+  supabaseUrl: 'https://ptxoidynvchtbrlhqifk.supabase.co',
+  supabaseAnonKey: 'sb_publishable_XIVjv95_RETxyNH4sb2HZA__TQiWj_a',
 
   // true = מצב הדגמה: האתר עובד עם נתוני דוגמה, בלי Supabase ובלי כניסה.
   // אחרי שממלאים את שני השדות למעלה, משנים ל-false.
